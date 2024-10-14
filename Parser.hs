@@ -1,6 +1,6 @@
 module Parser where
 
-import Scanner (scan, Token(..), Operator(..))
+import Scanner (Token(..), Operator(..))
 
 data AST = LitInteger Integer
          | BinOp BinaryOperator AST AST
@@ -46,9 +46,3 @@ parseTerm (OpenPar : ts)  = do
     (ClosedPar : rest') -> Just (nextAST, rest')
     _                   -> Nothing
 parseFactor _ = Nothing
-
-main :: IO ()
-main = do
-  putStrLn $ show $ parseExpr $ scan "3 + 2"
-  putStrLn $ show $ parseExpr $ scan "12 * 8 * 2 /2"
-  putStrLn $ show $ parseExpr $ scan "3 * (2 - 1)"

@@ -48,11 +48,3 @@ scanClosedPar _         = Nothing
 
 removeWhite :: String -> String
 removeWhite src = dropWhile isSpace src
-
-main :: IO ()
-main = do
-  putStrLn $ show $ scanInt "123 + 321"
-  putStrLn $ show $ scanOp "+"
-  putStrLn $ show $ scanOpenPar "("
-  putStrLn $ show $ scanToken "999"
-  putStrLn $ show $ scan "3    + 2"

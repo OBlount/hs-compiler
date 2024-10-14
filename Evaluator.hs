@@ -1,9 +1,6 @@
 module Evaluator where
 
-import Data.Maybe (fromMaybe)
-
-import Scanner (scan)
-import Parser (parse, AST(..), BinaryOperator(..))
+import Parser (AST(..), BinaryOperator(..))
 
 eval :: AST -> Integer
 eval = evaluate
@@ -18,7 +15,3 @@ evaluate (BinOp op left right) =
     Subtraction    -> leftValue - rightValue
     Multiplication -> leftValue * rightValue
     Division       -> leftValue `div` rightValue
-
-main :: IO ()
-main = do
-  print $ fromIntegral $ eval $ fst $ fromMaybe (error "Parsing failed") (parse $ scan "7 + (10/3) * 2")
