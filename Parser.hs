@@ -11,8 +11,10 @@ data BinaryOperator = Addition | Subtraction | Multiplication | Division derivin
 
 data UnaryOperator = Negation deriving (Show)
 
-parse :: [Token] -> Maybe (AST, [Token])
-parse = parseExpr
+parse :: [Token] -> AST
+parse ts = case parseExpr ts of
+             Just (ast, _) -> ast
+             Nothing       -> error "Parser: invalid AST"
 
 parseExpr :: [Token] -> Maybe (AST, [Token])
 parseExpr ts = do
