@@ -1,50 +1,96 @@
 module Parser where
 
-import Scanner (Token(..), Operator(..))
+import Control.Applicative
+import Data.Char
 
-data AST = LitInteger Integer
-         | BinOp BinaryOperator AST AST
-         | UnOp UnaryOperator AST
-         deriving (Show)
+import MiniTriangle (Expr(..))
+import MiniTriangle (BinaryOperator(..), UnaryOperator(..))
+import MiniTriangle (Command(..), Declaration(..), Program(..), Identifier)
 
-data BinaryOperator = Addition | Subtraction | Multiplication | Division deriving (Show)
+newtype Parser a = P (String -> [(a, String)])
 
-data UnaryOperator = Negation deriving (Show)
+instance Functor Parser where
+  fmap f p = P (\src -> map (\(v, src') -> (f v, src')) (parse p src))
 
-parse :: [Token] -> AST
-parse ts = case parseExpr ts of
-             Just (ast, _) -> ast
-             Nothing       -> error "Parser: invalid AST"
+instance Applicative Parser where
+  pure v    = P (\src -> [(v, src)])
+  pg <*> px = P (\src -> concat $
+                  map (\(g, src') -> parse (fmap g px) src') (parse pg src))
 
-parseExpr :: [Token] -> Maybe (AST, [Token])
-parseExpr ts = do
-  (currentAST, rest) <- parseMExpr ts
-  case rest of
-    (Oper Plus : ts') -> do
-      (nextAST, rest') <- parseExpr ts'
-      Just (BinOp Addition currentAST nextAST, rest')
-    (Oper Minus : ts') -> do
-      (nextAST, rest') <- parseExpr ts'
-      Just (BinOp Subtraction currentAST nextAST, rest')
-    _ -> Just (currentAST, rest)
+instance Monad Parser where
+  p >>= f = P (\src -> concat $
+                map (\(v, src') -> parse (f v) src') (parse p src))
 
-parseMExpr :: [Token] -> Maybe (AST, [Token])
-parseMExpr ts = do
-  (currentAST, rest) <- parseTerm ts
-  case rest of
-    (Oper Times : ts') -> do
-      (nextAST, rest') <- parseMExpr ts'
-      Just (BinOp Multiplication currentAST nextAST, rest')
-    (Oper Divide : ts') -> do
-      (nextAST, rest') <- parseMExpr ts'
-      Just (BinOp Division currentAST nextAST, rest')
-    _ -> Just (currentAST, rest)
+instance Alternative Parser where
+  empty   = P (\src -> [])
+  p <|> q = P (\src -> case parse p src of
+                []         -> parse q src
+                [(v, out)] -> [(v, out)])
 
-parseTerm :: [Token] -> Maybe (AST, [Token])
-parseTerm (Number x : ts) = Just (LitInteger $ toInteger x, ts)
-parseTerm (OpenPar : ts)  = do
-  (nextAST, rest) <- parseExpr ts
-  case rest of
-    (ClosedPar : rest') -> Just (nextAST, rest')
-    _                   -> Nothing
-parseFactor _ = Nothing
+parse :: Parser a -> String -> [(a, String)]
+parse (P p) src = p src
+
+item :: Parser Char
+item = P (\src -> case src of
+           [] -> []
+           (c:src') -> [(c, src')])
+
+sat :: (Char -> Bool) -> Parser Char
+sat p = do
+  x <- item
+  if p x then return x else empty
+
+digit :: Parser Char
+digit = sat isDigit
+
+char :: Char -> Parser Char
+char c = sat (== c)
+
+string :: String -> Parser String
+string []     = return []
+string (x:xs) = do
+  char x
+  string xs
+  return (x:xs)
+
+space :: Parser ()
+space = P (\src -> let (ds, src') = span isSpace src
+                   in [((), src')])
+
+token :: Parser a -> Parser a
+token pa = P (\src -> concat $
+               map (\(_, src') -> parse pa src') (parse space src))
+
+identifier :: Parser Identifier
+identifier = some (sat isAlphaNum)
+
+literalInt :: Parser Expr
+literalInt =  token $ do
+  xs <- some digit
+  return (LiteralInt $ read xs)
+
+expr :: Parser Expr
+expr = do
+  t  <- term
+  ts <- many (do
+      _  <- token (string "+")
+      t' <- term
+      return (\base -> BinOp Addition base t')
+    <|> do
+      _ <- token (string "-")
+      t' <- term
+      return (\base -> BinOp Subtraction base t'))
+  return (foldl (\base x -> x base) t ts)
+
+term :: Parser Expr
+term = do
+  x  <- literalInt
+  xs <- many (do
+      _  <- token (string "*")
+      x' <- literalInt
+      return (\base -> BinOp Multiplication base x')
+    <|> do
+      _  <- token (string "/")
+      x' <- literalInt
+      return (\base -> BinOp Division base x'))
+  return (foldl (\base x -> x base) x xs)
