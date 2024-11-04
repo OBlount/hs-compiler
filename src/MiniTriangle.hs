@@ -6,7 +6,10 @@ data Expr = LiteralInt Int | Var Identifier
           | Conditional Expr Expr Expr
   deriving (Show)
 
-data BinaryOperator = Addition | Subtraction | Multiplication | Division
+data BinaryOperator = Addition    | Subtraction      | Multiplication | Division
+                    | LessThan    | LessThanEqual
+                    | GreaterThan | GreaterThanEqual
+                    | Equal       | NotEqual
   deriving (Show)
 
 data UnaryOperator = Negation

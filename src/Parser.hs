@@ -69,28 +69,67 @@ literalInt =  token $ do
   xs <- some digit
   return (LiteralInt $ read xs)
 
-expr :: Parser Expr
-expr = do
-  t  <- term
+-- Operator precedence where tier 1 is highest
+
+tier4 :: Parser Expr
+tier4 = do
+  t  <- tier3
+  ts <- many (do
+      _  <- token (string "<")
+      t' <- tier3
+      return (\base -> BinOp LessThan base t')
+    <|> do
+      _  <- token (string "<=")
+      t' <- tier3
+      return (\base -> BinOp LessThanEqual base t')
+    <|> do
+      _  <- token (string ">")
+      t' <- tier3
+      return (\base -> BinOp GreaterThan base t')
+    <|> do
+      _  <- token (string ">=")
+      t' <- tier3
+      return (\base -> BinOp GreaterThanEqual base t')
+    <|> do
+      _  <- token (string "==")
+      t' <- tier3
+      return (\base -> BinOp Equal base t')
+    <|> do
+      _  <- token (string "!=")
+      t' <- tier3
+      return (\base -> BinOp NotEqual base t'))
+  return (foldl (\base x -> x base) t ts)
+
+tier3 :: Parser Expr
+tier3 = do
+  t  <- tier2
   ts <- many (do
       _  <- token (string "+")
-      t' <- term
+      t' <- tier2
       return (\base -> BinOp Addition base t')
     <|> do
-      _ <- token (string "-")
-      t' <- term
+      _  <- token (string "-")
+      t' <- tier2
       return (\base -> BinOp Subtraction base t'))
   return (foldl (\base x -> x base) t ts)
 
-term :: Parser Expr
-term = do
-  x  <- literalInt
-  xs <- many (do
+tier2 :: Parser Expr
+tier2 = do
+  t  <- tier1
+  ts <- many (do
       _  <- token (string "*")
-      x' <- literalInt
-      return (\base -> BinOp Multiplication base x')
+      t' <- tier1
+      return (\base -> BinOp Multiplication base t')
     <|> do
       _  <- token (string "/")
-      x' <- literalInt
-      return (\base -> BinOp Division base x'))
-  return (foldl (\base x -> x base) x xs)
+      t' <- tier1
+      return (\base -> BinOp Division base t'))
+  return (foldl (\base x -> x base) t ts)
+
+tier1 :: Parser Expr
+tier1 = do
+  neg <- optional (token (string "-"))
+  t   <- literalInt
+  return $ case neg of
+    Just _  -> UnOp Negation t
+    Nothing -> t
