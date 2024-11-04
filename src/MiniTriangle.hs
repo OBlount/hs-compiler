@@ -10,9 +10,10 @@ data BinaryOperator = Addition    | Subtraction      | Multiplication | Division
                     | LessThan    | LessThanEqual
                     | GreaterThan | GreaterThanEqual
                     | Equal       | NotEqual
+                    | Conjunction | Disjunction
   deriving (Show)
 
-data UnaryOperator = Negation
+data UnaryOperator = Negation | Not
   deriving (Show)
 
 data Command = Assignment Identifier Expr

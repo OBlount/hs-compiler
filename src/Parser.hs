@@ -70,6 +70,42 @@ literalInt =  token $ do
   return (LiteralInt $ read xs)
 
 -- Operator precedence where tier 1 is highest
+tier8 :: Parser Expr
+tier8 = do
+  t  <- tier7
+  ts <- many (do
+      _   <- token (string "?")
+      t'  <- tier7
+      _   <- token (string ":")
+      t'' <- tier7
+      return (\base -> Conditional base t' t''))
+  return (foldl (\base x -> x base) t ts)
+
+tier7 :: Parser Expr
+tier7 = do
+  t  <- tier6
+  ts <- many (do
+      _  <- token (string "||")
+      t' <- tier6
+      return (\base -> BinOp Disjunction base t'))
+  return (foldl (\base x -> x base) t ts)
+
+tier6 :: Parser Expr
+tier6 = do
+  t  <- tier5
+  ts <- many (do
+      _  <- token (string "&&")
+      t' <- tier5
+      return (\base -> BinOp Conjunction base t'))
+  return (foldl (\base x -> x base) t ts)
+
+tier5 :: Parser Expr
+tier5 = do
+  not <- optional (token (string "!"))
+  t   <- tier4
+  return $ case not of
+    Just _  -> UnOp Not t
+    Nothing -> t
 
 tier4 :: Parser Expr
 tier4 = do
