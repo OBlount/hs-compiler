@@ -69,7 +69,11 @@ literalInt =  token $ do
   xs <- some digit
   return (LiteralInt $ read xs)
 
--- Operator precedence where tier 1 is highest
+-- Parser for arithmetic and expressions (tier 1 = highest precedence)
+
+parseExpr :: Parser Expr
+parseExpr = tier8
+
 tier8 :: Parser Expr
 tier8 = do
   t  <- tier7
@@ -169,3 +173,91 @@ tier1 = do
   return $ case neg of
     Just _  -> UnOp Negation t
     Nothing -> t
+
+-- Parser for commands
+
+command :: Parser Command
+command = assign
+      <|> ifThenElse
+      <|> while
+      <|> getInt
+      <|> printInt
+      <|> beginEnd
+
+assign :: Parser Command
+assign = do
+  var  <- token identifier
+  _    <- token (string ":=")
+  expr <- token parseExpr
+  return (Assignment var expr)
+
+ifThenElse :: Parser Command
+ifThenElse = do
+  _           <- token (string "if")
+  condition   <- token parseExpr
+  _           <- token (string "then")
+  trueBranch  <- token command
+  _           <- token (string "else")
+  falseBranch <- token command
+  return (IfThenElse condition trueBranch falseBranch)
+
+while :: Parser Command
+while = do
+  _         <- token (string "while")
+  condition <- token parseExpr
+  _         <- token (string "do")
+  body      <- token command
+  return (While condition body)
+
+getInt :: Parser Command
+getInt = do
+  _  <- token (string "getint")
+  _  <- token (string "(")
+  id <- token identifier
+  _  <- token (string ")")
+  return (GetInt id)
+
+printInt :: Parser Command
+printInt = do
+  _    <- token (string "printint")
+  _    <- token (string "(")
+  expr <- token parseExpr
+  _    <- token (string ")")
+  return (PrintInt expr)
+
+beginEnd :: Parser Command
+beginEnd = do
+  _    <- token (string "begin")
+  cmds <- token (some command)
+  _    <- token (string "end")
+  return (BeginEnd cmds)
+
+-- Parser for declarations
+
+declaration :: Parser Declaration
+declaration = declareInit
+          <|> declare
+
+declareInit :: Parser Declaration
+declareInit = do
+  _    <- token (string "var")
+  id   <- token identifier
+  _    <- token (string ":=")
+  expr <- token parseExpr
+  return (VarInit id expr)
+
+declare :: Parser Declaration
+declare = do
+  _  <- token (string "var")
+  id <- token identifier
+  return (VarDecl id)
+
+-- Parser for programs
+
+program :: Parser Program
+program = do
+  _    <- token (string "let")
+  vars <- token (some declaration)
+  _    <- token (string "in")
+  body <- token command
+  return (LetIn vars body)
