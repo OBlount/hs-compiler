@@ -168,28 +168,24 @@ tier2 = do
 
 tier1 :: Parser Expr
 tier1 = do
-  neg <- optional (token (string "-"))
-  t   <- literalInt
-  return $ case neg of
-    Just _  -> UnOp Negation t
-    Nothing -> t
+    _ <- token (string "-")
+    t <- literalInt
+    return (UnOp Negation t)
+  <|> do
+    t <- literalInt
+    return (t)
+  <|> do
+    t <- identifier
+    return (Var t)
 
 -- Parser for commands
 
 command :: Parser Command
-command = assign
-      <|> ifThenElse
+command = ifThenElse
       <|> while
       <|> getInt
       <|> printInt
       <|> beginEnd
-
-assign :: Parser Command
-assign = do
-  var  <- token identifier
-  _    <- token (string ":=")
-  expr <- token parseExpr
-  return (Assignment var expr)
 
 ifThenElse :: Parser Command
 ifThenElse = do
@@ -228,7 +224,7 @@ printInt = do
 beginEnd :: Parser Command
 beginEnd = do
   _    <- token (string "begin")
-  cmds <- token (some command)
+  cmds <- token (many command)
   _    <- token (string "end")
   return (BeginEnd cmds)
 
@@ -257,7 +253,7 @@ declare = do
 program :: Parser Program
 program = do
   _    <- token (string "let")
-  vars <- token (some declaration)
+  vars <- token (many declaration)
   _    <- token (string "in")
   body <- token command
   return (LetIn vars body)

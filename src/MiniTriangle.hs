@@ -16,8 +16,7 @@ data BinaryOperator = Addition    | Subtraction      | Multiplication | Division
 data UnaryOperator = Negation | Not
   deriving (Show)
 
-data Command = Assignment Identifier Expr
-             | IfThenElse Expr Command Command
+data Command = IfThenElse Expr Command Command
              | While Expr Command
              | GetInt Identifier
              | PrintInt Expr
