@@ -1,36 +1,62 @@
 module Compiler where
 
-import MiniTriangle (Program(..), Declaration(..), Command(..))
+import Data.List
+
+import MiniTriangle (Program(..), Declaration(..), Command(..), Identifier)
 import MiniTriangle (Expr(..), BinaryOperator(..), UnaryOperator(..))
-import TAMCode (Instruction(..))
+import TAMCode (Instruction(..), VarEnvironment)
+import CompilerState (CompilerState(..), stUpdate, stState, getInstructions)
 
 compile :: Program -> [Instruction]
-compile (LetIn ds c) = (declarationCode ds) ++ (commandCode c) ++ [HALT]
+compile (LetIn ds c) =
+  let compiledCode = getInstructions (do
+      vars <- declarationCode ds
+      cmds <- commandCode c
+      return (vars ++ cmds)) []
+  in compiledCode ++ [HALT]
 
-programCode :: Program -> [Instruction]
-programCode (LetIn ds c) = (declarationCode ds) ++ (commandCode c) ++ [HALT]
+declarationCode :: [Declaration] -> CompilerState [Instruction]
+declarationCode []                = return []
+declarationCode (VarDecl id:ds)   = do
+  env     <- stState
+  let addr = length env
+  stUpdate ((id, addr) :env)
+  rest    <- declarationCode ds
+  return (LOADL 0 : rest)
+declarationCode (VarInit id v:ds) = do
+  expr     <- expressionCode v
+  env      <- stState
+  let addr  = length env
+  stUpdate ((id, addr) :env)
+  rest     <- declarationCode ds
+  return (expr ++ rest)
 
-declarationCode :: [Declaration] -> [Instruction]
-declarationCode []               = []
-declarationCode (VarDecl _:ds)   = LOADL 0 : declarationCode ds
-declarationCode (VarInit _ v:ds) = expressionCode v ++ declarationCode ds
-
-commandCode :: Command -> [Instruction]
+commandCode :: Command -> CompilerState [Instruction]
 commandCode (BeginEnd cs) = commandsCode cs
 
-commandsCode :: [Command] -> [Instruction]
-commandsCode []                     = []
+commandsCode :: [Command] -> CompilerState [Instruction]
+commandsCode []                     = return []
 commandsCode (IfThenElse e c c':cs) = undefined -- TODO
 commandsCode (While e c:cs)         = undefined -- TODO
 commandsCode (GetInt l:cs)          = undefined -- TODO
-commandsCode (PrintInt e:cs)        = expressionCode e ++ [PUTINT]
+commandsCode (PrintInt e:cs)        = do
+  expr <- expressionCode e
+  rest <- commandsCode cs
+  return (expr ++ [PUTINT] ++ rest)
 
-expressionCode :: Expr -> [Instruction]
-expressionCode (LiteralInt x)         = [LOADL x]
-expressionCode (Var id)               = [LOAD 0] -- TODO: load in identifier
-expressionCode (BinOp op e e')        = expressionCode e ++ expressionCode e' ++ binopCode op
-expressionCode (UnOp op e)            = expressionCode e ++ unopCode op
-expressionCode (Conditional e e' e'') = undefined -- TODO
+expressionCode :: Expr -> CompilerState [Instruction]
+expressionCode (LiteralInt x)   = return [LOADL x]
+expressionCode (Var id)         = do
+  env <- stState
+  let addr = getAddress id env
+  return [LOAD addr]
+expressionCode (BinOp op e1 e2) = do
+  expr1 <- expressionCode e1
+  expr2 <- expressionCode e2
+  return (expr1 ++ expr2 ++ binopCode op)
+expressionCode (UnOp op e)      = do
+  expr <- expressionCode e
+  return (expr ++ unopCode op)
 
 binopCode :: BinaryOperator -> [Instruction]
 binopCode Addition         = [ADD]
@@ -49,3 +75,8 @@ binopCode Disjunction      = [OR]
 unopCode :: UnaryOperator -> [Instruction]
 unopCode Negation = [NOT]
 unopCode Not      = [NOT]
+
+getAddress :: Identifier -> VarEnvironment -> Int
+getAddress id env = case lookup id env of
+  Just addr -> addr
+  Nothing   -> error ("Variable " ++ id ++ " not found in env:\n" ++ show env)

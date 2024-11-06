@@ -1,7 +1,8 @@
 module Parser where
 
-import Control.Applicative
 import Data.Char
+import Control.Applicative
+import Control.Monad
 
 import MiniTriangle (Expr(..))
 import MiniTriangle (BinaryOperator(..), UnaryOperator(..))

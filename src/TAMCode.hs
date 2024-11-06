@@ -22,3 +22,5 @@ data Instruction = LOAD Int
                  | OR
                  | NOT
   deriving (Show)
+
+type VarEnvironment = [(Identifier, Int)]
