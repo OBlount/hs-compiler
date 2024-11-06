@@ -18,17 +18,17 @@ compile (LetIn ds c) =
 declarationCode :: [Declaration] -> CompilerState [Instruction]
 declarationCode []                = return []
 declarationCode (VarDecl id:ds)   = do
-  env     <- stState
+  env <- stState
   let addr = length env
   stUpdate ((id, addr) :env)
-  rest    <- declarationCode ds
+  rest <- declarationCode ds
   return (LOADL 0 : rest)
 declarationCode (VarInit id v:ds) = do
-  expr     <- expressionCode v
-  env      <- stState
-  let addr  = length env
+  expr <- expressionCode v
+  env  <- stState
+  let addr = length env
   stUpdate ((id, addr) :env)
-  rest     <- declarationCode ds
+  rest <- declarationCode ds
   return (expr ++ rest)
 
 commandCode :: Command -> CompilerState [Instruction]
@@ -38,7 +38,11 @@ commandsCode :: [Command] -> CompilerState [Instruction]
 commandsCode []                     = return []
 commandsCode (IfThenElse e c c':cs) = undefined -- TODO
 commandsCode (While e c:cs)         = undefined -- TODO
-commandsCode (GetInt l:cs)          = undefined -- TODO
+commandsCode (GetInt id:cs)         = do
+  env  <- stState
+  rest <- commandsCode cs
+  let addr = getAddress id env
+  return ([GETINT, STORE addr] ++ rest)
 commandsCode (PrintInt e:cs)        = do
   expr <- expressionCode e
   rest <- commandsCode cs
