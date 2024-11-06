@@ -15,7 +15,7 @@ compile (LetIn ds c) =
       return (vars ++ cmds)) []
   in compiledCode ++ [HALT]
 
-declarationCode :: [Declaration] -> CompilerState [Instruction]
+declarationCode :: [Declaration] -> CompilerState VarEnvironment [Instruction]
 declarationCode []                = return []
 declarationCode (VarDecl id:ds)   = do
   env <- stState
@@ -31,10 +31,10 @@ declarationCode (VarInit id v:ds) = do
   rest <- declarationCode ds
   return (expr ++ rest)
 
-commandCode :: Command -> CompilerState [Instruction]
+commandCode :: Command -> CompilerState VarEnvironment [Instruction]
 commandCode (BeginEnd cs) = commandsCode cs
 
-commandsCode :: [Command] -> CompilerState [Instruction]
+commandsCode :: [Command] -> CompilerState VarEnvironment [Instruction]
 commandsCode []                     = return []
 commandsCode (Assign id e:cs)       = do
   expr <- expressionCode e
@@ -54,7 +54,7 @@ commandsCode (PrintInt e:cs)        = do
   rest <- commandsCode cs
   return (expr ++ [PUTINT] ++ rest)
 
-expressionCode :: Expr -> CompilerState [Instruction]
+expressionCode :: Expr -> CompilerState VarEnvironment [Instruction]
 expressionCode (LiteralInt x)   = return [LOADL x]
 expressionCode (Var id)         = do
   env <- stState
