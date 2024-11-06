@@ -36,6 +36,12 @@ commandCode (BeginEnd cs) = commandsCode cs
 
 commandsCode :: [Command] -> CompilerState [Instruction]
 commandsCode []                     = return []
+commandsCode (Assign id e:cs)       = do
+  expr <- expressionCode e
+  env  <- stState
+  rest <- commandsCode cs
+  let addr = getAddress id env
+  return (expr ++ [STORE addr] ++ rest)
 commandsCode (IfThenElse e c c':cs) = undefined -- TODO
 commandsCode (While e c:cs)         = undefined -- TODO
 commandsCode (GetInt id:cs)         = do

@@ -7,7 +7,7 @@ import Compiler
 main :: IO ()
 main = do
   let src = "let var i := 3 var j in\
-    \ begin printint (i) getint(j) printint(j) end"
+    \ begin printint (i) getint(j) printint(j) j := 10 end"
   putStrLn ("src> " ++ src)
   let parseResult = parse program src
   case parseResult of

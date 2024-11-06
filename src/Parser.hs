@@ -182,11 +182,19 @@ tier1 = do
 -- Parser for commands
 
 command :: Parser Command
-command = ifThenElse
+command = assign
+      <|> ifThenElse
       <|> while
       <|> getInt
       <|> printInt
       <|> beginEnd
+
+assign :: Parser Command
+assign = do
+  id   <- token identifier
+  _    <- token (string ":=")
+  expr <- token parseExpr
+  return (Assign id expr)
 
 ifThenElse :: Parser Command
 ifThenElse = do
