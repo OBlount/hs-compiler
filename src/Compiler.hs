@@ -67,10 +67,10 @@ commandsCode env (PrintInt e:cs)        = do
 expressionCode :: VarEnvironment -> Expr -> [Instruction]
 expressionCode env (LiteralInt x)         = [LOADL x]
 expressionCode env (Var id)               = let addr = getAddress id env in [LOAD addr]
-expressionCode env (BinOp op e e')        = (expr1 ++ expr2 ++ binopCode op)
+expressionCode env (BinOp op e e')        = (expr ++ expr' ++ binopCode op)
   where
-    expr1 = expressionCode env e
-    expr2 = expressionCode env e'
+    expr  = expressionCode env e
+    expr' = expressionCode env e'
 expressionCode env (UnOp op e)            = (expr ++ unopCode op)
   where
     expr = expressionCode env e
