@@ -31,6 +31,7 @@ declarationCode (VarInit id e:ds) = do
 
 commandCode :: VarEnvironment -> Command -> CompilerState Int [Instruction]
 commandCode env (BeginEnd cs) = commandsCode env cs
+commandCode _ _               = error "[ERROR] - Unable to compile commands of your program"
 
 commandsCode :: VarEnvironment -> [Command] -> CompilerState Int [Instruction]
 commandsCode _ []                       = return []
@@ -47,7 +48,13 @@ commandsCode env (IfThenElse e c c':cs) = do
   endLabel  <- freshLabel
   rest      <- commandsCode env cs
   return (expr ++ [JUMPIFZ elseLabel] ++ thenCmd ++ [JUMP endLabel] ++ [Label elseLabel] ++ elseCmd ++ [Label endLabel] ++ rest)
-commandsCode env (While e c:cs)         = undefined -- TODO
+commandsCode env (While e c:cs)         = do
+  let expr = expressionCode env e
+  body       <- commandCode env c
+  startLabel <- freshLabel
+  endLabel   <- freshLabel
+  rest       <- commandsCode env cs
+  return ([Label startLabel] ++ expr ++ [JUMPIFZ endLabel] ++ body ++ [JUMP startLabel] ++ rest)
 commandsCode env (GetInt id:cs)         = do
   let addr = getAddress id env
   rest <- commandsCode env cs
@@ -90,4 +97,4 @@ unopCode Not      = [NOT]
 getAddress :: Identifier -> VarEnvironment -> Int
 getAddress id env = case lookup id env of
   Just addr -> addr
-  Nothing   -> error ("Variable " ++ id ++ " not found in env:\n" ++ show env)
+  Nothing   -> error ("[ERROR] - Variable " ++ id ++ " not found in env:\n" ++ show env)

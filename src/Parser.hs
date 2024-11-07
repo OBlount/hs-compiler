@@ -173,10 +173,10 @@ tier1 = do
     t <- literalInt
     return (UnOp Negation t)
   <|> do
-    t <- literalInt
+    t <- token literalInt
     return (t)
   <|> do
-    t <- identifier
+    t <- token identifier
     return (Var t)
 
 -- Parser for commands
