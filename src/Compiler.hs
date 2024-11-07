@@ -5,7 +5,7 @@ import Data.List
 import MiniTriangle (Program(..), Declaration(..), Command(..), Identifier)
 import MiniTriangle (Expr(..), BinaryOperator(..), UnaryOperator(..))
 import TAMCode (Instruction(..), VarEnvironment)
-import CompilerState (CompilerState(..), stUpdate, stState, getInstructionsAndState)
+import CompilerState (CompilerState(..), stUpdate, stState, getInstructionsAndState, freshLabel)
 
 compile :: Program -> [Instruction]
 compile (LetIn ds c) =
@@ -22,7 +22,7 @@ declarationCode (VarDecl id:ds)   = do
   rest <- declarationCode ds
   return (LOADL 0 : rest)
 declarationCode (VarInit id e:ds) = do
-  env  <- stState
+  env <- stState
   let expr = expressionCode env e
   let addr = length env
   stUpdate ((id, addr) :env)
@@ -39,7 +39,14 @@ commandsCode env (Assign id e:cs)       = do
   let addr = getAddress id env
   rest <- commandsCode env cs
   return (expr ++ [STORE addr] ++ rest)
-commandsCode env (IfThenElse e c c':cs) = undefined -- TODO
+commandsCode env (IfThenElse e c c':cs) = do
+  let expr = expressionCode env e
+  thenCmd   <- commandsCode env [c]
+  elseCmd   <- commandsCode env [c']
+  elseLabel <- freshLabel
+  endLabel  <- freshLabel
+  rest      <- commandsCode env cs
+  return (expr ++ [JUMPIFZ elseLabel] ++ thenCmd ++ [JUMP endLabel] ++ [Label elseLabel] ++ elseCmd ++ [Label endLabel] ++ rest)
 commandsCode env (While e c:cs)         = undefined -- TODO
 commandsCode env (GetInt id:cs)         = do
   let addr = getAddress id env

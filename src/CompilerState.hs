@@ -33,3 +33,9 @@ stState = S (\st -> (st, st))
 
 getInstructionsAndState :: CompilerState s a -> s -> (a, s)
 getInstructionsAndState (S st) env = st env
+
+freshLabel :: CompilerState Int Identifier
+freshLabel = do
+  n <- stState
+  stUpdate (n+1)
+  return ('#':(show n))

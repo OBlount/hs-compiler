@@ -6,8 +6,8 @@ import Compiler
 
 main :: IO ()
 main = do
-  let src = "let var i := 3; var j in\
-    \ begin printint (i) getint(j); printint(j) j := 10 end"
+  let src = "let var n; var x; in\
+    \ begin getint(n); if n < 10 then x := 0 else x := 1; printint(x); end"
   putStrLn ("src> " ++ src)
   let parseResult = parse program src
   case parseResult of
