@@ -5,15 +5,13 @@ import Data.List
 import MiniTriangle (Program(..), Declaration(..), Command(..), Identifier)
 import MiniTriangle (Expr(..), BinaryOperator(..), UnaryOperator(..))
 import TAMCode (Instruction(..), VarEnvironment)
-import CompilerState (CompilerState(..), stUpdate, stState, getInstructions)
+import CompilerState (CompilerState(..), stUpdate, stState, getInstructionsAndState)
 
 compile :: Program -> [Instruction]
 compile (LetIn ds c) =
-  let compiledCode = getInstructions (do
-      vars <- declarationCode ds
-      cmds <- commandCode c
-      return (vars ++ cmds)) []
-  in compiledCode ++ [HALT]
+  let (varCode, varEnv) = getInstructionsAndState (declarationCode ds) []
+      (cmdCode, _)      = getInstructionsAndState (commandCode varEnv c) 0
+  in varCode ++ cmdCode ++ [HALT]
 
 declarationCode :: [Declaration] -> CompilerState VarEnvironment [Instruction]
 declarationCode []                = return []
@@ -23,50 +21,45 @@ declarationCode (VarDecl id:ds)   = do
   stUpdate ((id, addr) :env)
   rest <- declarationCode ds
   return (LOADL 0 : rest)
-declarationCode (VarInit id v:ds) = do
-  expr <- expressionCode v
+declarationCode (VarInit id e:ds) = do
   env  <- stState
+  let expr = expressionCode env e
   let addr = length env
   stUpdate ((id, addr) :env)
   rest <- declarationCode ds
   return (expr ++ rest)
 
-commandCode :: Command -> CompilerState VarEnvironment [Instruction]
-commandCode (BeginEnd cs) = commandsCode cs
+commandCode :: VarEnvironment -> Command -> CompilerState Int [Instruction]
+commandCode env (BeginEnd cs) = commandsCode env cs
 
-commandsCode :: [Command] -> CompilerState VarEnvironment [Instruction]
-commandsCode []                     = return []
-commandsCode (Assign id e:cs)       = do
-  expr <- expressionCode e
-  env  <- stState
-  rest <- commandsCode cs
+commandsCode :: VarEnvironment -> [Command] -> CompilerState Int [Instruction]
+commandsCode _ []                       = return []
+commandsCode env (Assign id e:cs)       = do
+  let expr = expressionCode env e
   let addr = getAddress id env
+  rest <- commandsCode env cs
   return (expr ++ [STORE addr] ++ rest)
-commandsCode (IfThenElse e c c':cs) = undefined -- TODO
-commandsCode (While e c:cs)         = undefined -- TODO
-commandsCode (GetInt id:cs)         = do
-  env  <- stState
-  rest <- commandsCode cs
+commandsCode env (IfThenElse e c c':cs) = undefined -- TODO
+commandsCode env (While e c:cs)         = undefined -- TODO
+commandsCode env (GetInt id:cs)         = do
   let addr = getAddress id env
+  rest <- commandsCode env cs
   return ([GETINT, STORE addr] ++ rest)
-commandsCode (PrintInt e:cs)        = do
-  expr <- expressionCode e
-  rest <- commandsCode cs
+commandsCode env (PrintInt e:cs)        = do
+  let expr = expressionCode env e
+  rest <- commandsCode env cs
   return (expr ++ [PUTINT] ++ rest)
 
-expressionCode :: Expr -> CompilerState VarEnvironment [Instruction]
-expressionCode (LiteralInt x)   = return [LOADL x]
-expressionCode (Var id)         = do
-  env <- stState
-  let addr = getAddress id env
-  return [LOAD addr]
-expressionCode (BinOp op e1 e2) = do
-  expr1 <- expressionCode e1
-  expr2 <- expressionCode e2
-  return (expr1 ++ expr2 ++ binopCode op)
-expressionCode (UnOp op e)      = do
-  expr <- expressionCode e
-  return (expr ++ unopCode op)
+expressionCode :: VarEnvironment -> Expr -> [Instruction]
+expressionCode env (LiteralInt x)  = [LOADL x]
+expressionCode env (Var id)        = let addr = getAddress id env in [LOAD addr]
+expressionCode env (BinOp op e e') = (expr1 ++ expr2 ++ binopCode op)
+  where
+    expr1 = expressionCode env e
+    expr2 = expressionCode env e'
+expressionCode env (UnOp op e)     = (expr ++ unopCode op)
+  where
+    expr = expressionCode env e
 
 binopCode :: BinaryOperator -> [Instruction]
 binopCode Addition         = [ADD]

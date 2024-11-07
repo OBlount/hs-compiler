@@ -31,5 +31,5 @@ stUpdate env' = S (\_ -> ((), env'))
 stState :: CompilerState s s
 stState = S (\st -> (st, st))
 
-getInstructions :: CompilerState VarEnvironment a -> VarEnvironment -> a
-getInstructions st env = fst (app st env)
+getInstructionsAndState :: CompilerState s a -> s -> (a, s)
+getInstructionsAndState (S st) env = st env
