@@ -4,7 +4,7 @@ import Data.List
 import Control.Applicative
 import Control.Monad
 
-import ST (ST(..), stState, stUpdate)
+import STIO (StateIO(..), stState, stUpdate)
 import TAMCode (Instruction(..))
 import MiniTriangle (Identifier)
 
@@ -19,44 +19,44 @@ data TAMState = TAMState {
 
 -- TAMState operations
 
-stackPush :: Int -> ST TAMState ()
+stackPush :: Int -> StateIO TAMState ()
 stackPush x = do
   state <- stState
   stUpdate (push x state)
 
-stackPop :: ST TAMState Int
+stackPop :: StateIO TAMState Int
 stackPop = do
   state <- stState
   let (x, state') = pop state
   stUpdate state'
   return x
 
-stackSetCounter :: Int -> ST TAMState ()
+stackSetCounter :: Int -> StateIO TAMState ()
 stackSetCounter x = do
   state <- stState
   stUpdate (setCounter x state)
 
-stackNextInstruction :: ST TAMState Instruction
+stackNextInstruction :: StateIO TAMState Instruction
 stackNextInstruction = do
   state <- stState
   return (nextInstruction state)
 
-getCounter :: ST TAMState PC
+getCounter :: StateIO TAMState PC
 getCounter = do
   state <- stState
   return (tsCounter state)
 
-updateCounter :: PC -> ST TAMState ()
+updateCounter :: PC -> StateIO TAMState ()
 updateCounter c = do
   state <- stState
   stUpdate (state { tsCounter = c })
 
-continue :: ST TAMState ()
+continue :: StateIO TAMState ()
 continue = do
   c <- getCounter
   updateCounter (c+1)
 
-findLabel :: Identifier -> ST TAMState Int
+findLabel :: Identifier -> StateIO TAMState Int
 findLabel id = do
   state <- stState
   let is    = tsCode state

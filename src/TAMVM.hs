@@ -2,16 +2,16 @@ module TAMVM where
 
 import TAMState (TAMState(..), Stack, PC)
 import TAMState ((!|!), continue, stackPush, stackPop, stackUpdate, findLabel, updateCounter)
-import ST (ST(..), stState, stUpdate)
+import STIO (StateIO(..), stState, stUpdate, lift)
 import TAMCode (Instruction(..))
 
-executeProgram :: [Instruction] -> ST TAMState ()
+executeProgram :: [Instruction] -> StateIO TAMState ()
 executeProgram []     = return ()
 executeProgram (i:is) = do
   execute i
   executeProgram (is)
 
-execute :: Instruction -> ST TAMState ()
+execute :: Instruction -> StateIO TAMState ()
 execute (LOAD a)      = do
   state <- stState
   let x = (tsStack state) !|! a
@@ -26,8 +26,15 @@ execute (STORE addr)  = do
 execute (LOADL x)    = do
   stackPush x
   continue
-execute (GETINT)     = undefined -- TODO
-execute (PUTINT)     = undefined -- TODO
+execute (GETINT)     = do
+  lift (putStrLn "Enter a number: ")
+  n <- lift getLine
+  stackPush (read n)
+  continue
+execute (PUTINT)     = do
+  n <- stackPop
+  lift (putStrLn ("Output> " ++ (show n)))
+  continue
 execute (JUMP id)    = do
   state              <- stState
   instructionAddress <- findLabel id
