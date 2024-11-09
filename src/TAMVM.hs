@@ -5,10 +5,10 @@ import TAMState ((!|!), continue, stackPush, stackPop, stackUpdate, findLabel, u
 import STIO (StateIO(..), stState, stUpdate, lift)
 import TAMCode (Instruction(..))
 
-run :: StateIO TAMState a -> TAMState -> IO a
-run (StT st) initialState = do
-  (ret, _) <- st initialState
-  return ret
+run :: StateIO TAMState a -> TAMState -> IO ()
+run (StT state) initialState = do
+  state initialState
+  return ()
 
 execute :: [Instruction] -> StateIO TAMState ()
 execute [] = return ()
