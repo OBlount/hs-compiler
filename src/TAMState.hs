@@ -17,6 +17,9 @@ data TAMState = TAMState {
   tsStack   :: Stack
 }
 
+instance Show TAMState where
+  show (TAMState _ _ stack) = (show stack)
+
 -- TAMState operations
 
 stackPush :: Int -> StateIO TAMState ()
