@@ -3,6 +3,8 @@ module Main where
 import MiniTriangle
 import Parser
 import Compiler
+import TAMVM
+import TAMState
 
 main :: IO ()
 main = do
@@ -22,9 +24,9 @@ main = do
     \    end;\
     \  printint (x); \
     \end"
-  putStrLn ("src> " ++ src)
-  let parseResult = parse program src
-  case parseResult of
+  case parse program src of
     []          -> error "[ERROR] - Unable to parse program"
-    [(ast, "")] -> print (compile ast)
-  putStrLn ("Success!")
+    [(ast, "")] -> do
+      let compileResult = compile ast
+      let initialState = TAMState { tsCode = compileResult, tsCounter = 0, tsStack = [] }
+      run (execute compileResult) initialState

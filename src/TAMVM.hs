@@ -1,107 +1,112 @@
 module TAMVM where
 
 import TAMState (TAMState(..), Stack, PC)
-import TAMState ((!|!), continue, stackPush, stackPop, stackUpdate, findLabel, updateCounter)
+import TAMState ((!|!), continue, stackPush, stackPop, stackUpdate, findLabel, updateCounter, stackNextInstruction)
 import STIO (StateIO(..), stState, stUpdate, lift)
 import TAMCode (Instruction(..))
 
-executeProgram :: [Instruction] -> StateIO TAMState ()
-executeProgram []     = return ()
-executeProgram (i:is) = do
-  execute i
-  executeProgram (is)
+run :: StateIO TAMState a -> TAMState -> IO a
+run (StT st) initialState = do
+  (ret, _) <- st initialState
+  return ret
 
-execute :: Instruction -> StateIO TAMState ()
-execute (LOAD a)      = do
+execute :: [Instruction] -> StateIO TAMState ()
+execute [] = return ()
+execute (i:is) = do
+  executeInstruction i
+  execute is
+
+executeInstruction :: Instruction -> StateIO TAMState ()
+executeInstruction (LOAD a)      = do
   state <- stState
   let x = (tsStack state) !|! a
   stackPush x
   continue
-execute (STORE addr)  = do
+executeInstruction (STORE addr)  = do
   x     <- stackPop
   state <- stState
   let updatedStack = stackUpdate (tsStack state) addr x
   stUpdate state { tsStack = updatedStack }
   continue
-execute (LOADL x)    = do
+executeInstruction (LOADL x)    = do
   stackPush x
   continue
-execute (GETINT)     = do
+executeInstruction (GETINT)     = do
   lift (putStrLn "Enter a number: ")
   n <- lift getLine
   stackPush (read n)
   continue
-execute (PUTINT)     = do
+executeInstruction (PUTINT)     = do
   n <- stackPop
   lift (putStrLn ("Output> " ++ (show n)))
   continue
-execute (JUMP id)    = do
+executeInstruction (JUMP id)    = do
   state              <- stState
   instructionAddress <- findLabel id
   updateCounter instructionAddress
-execute (JUMPIFZ id) = do
+executeInstruction (JUMPIFZ id) = do
   state              <- stState
   instructionAddress <- findLabel id
   p                  <- stackPop
   if p == 0 then updateCounter instructionAddress
             else continue
-execute (Label id)   = return ()
-execute (HALT)       = return ()
-execute (ADD)        = do
+executeInstruction (Label id)   = return ()
+executeInstruction (HALT)       = return ()
+executeInstruction (ADD)        = do
   state <- stState
   x     <- stackPop
   y     <- stackPop
   stackPush (x+y)
   continue
-execute (SUB)        = do
+executeInstruction (SUB)        = do
   state <- stState
   y     <- stackPop
   x     <- stackPop
   stackPush (x-y)
   continue
-execute (MUL)        = do
+executeInstruction (MUL)        = do
   state <- stState
   x     <- stackPop
   y     <- stackPop
   stackPush (x*y)
   continue
-execute (DIV)        = do
+executeInstruction (DIV)        = do
   state <- stState
   x     <- stackPop
   y     <- stackPop
   stackPush (x `div` y)
   continue
-execute (LSS)        = do
+executeInstruction (LSS)        = do
   state <- stState
   x     <- stackPop
   y     <- stackPop
   stackPush ((if (x < y) then 1 else 0))
   continue
-execute (GRT)        = do
+executeInstruction (GRT)        = do
   state <- stState
   x     <- stackPop
   y     <- stackPop
   stackPush ((if (x > y) then 1 else 0))
   continue
-execute (EQL)        = do
+executeInstruction (EQL)        = do
   state <- stState
   x     <- stackPop
   y     <- stackPop
   stackPush ((if (x == y) then 1 else 0))
   continue
-execute (AND)        = do
+executeInstruction (AND)        = do
   state <- stState
   x     <- stackPop
   y     <- stackPop
   stackPush ((if (x /= 0) && (y /= 0) then 1 else 0))
   continue
-execute (OR)         = do
+executeInstruction (OR)         = do
   state <- stState
   x     <- stackPop
   y     <- stackPop
   stackPush ((if (x /= 0) || (y /= 0) then 1 else 0))
   continue
-execute (NOT)        = do
+executeInstruction (NOT)        = do
   state <- stState
   x     <- stackPop
   stackPush ((if (x == 0) then 1 else 0))
