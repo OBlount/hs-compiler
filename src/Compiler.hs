@@ -4,8 +4,10 @@ import Data.List
 
 import MiniTriangle (Program(..), Declaration(..), Command(..), Identifier)
 import MiniTriangle (Expr(..), BinaryOperator(..), UnaryOperator(..))
-import TAMCode (Instruction(..), VarEnvironment)
-import CompilerState (CompilerState(..), stUpdate, stState, getInstructionsAndState, freshLabel)
+import TAMCode (Instruction(..))
+import ST (ST(..), stState, stUpdate)
+
+type VarEnvironment = [(Identifier, Int)]
 
 compile :: Program -> [Instruction]
 compile (LetIn ds c) =
@@ -13,7 +15,7 @@ compile (LetIn ds c) =
       (cmdCode, _)      = getInstructionsAndState (commandCode varEnv c) 0
   in varCode ++ cmdCode ++ [HALT]
 
-declarationCode :: [Declaration] -> CompilerState VarEnvironment [Instruction]
+declarationCode :: [Declaration] -> ST VarEnvironment [Instruction]
 declarationCode []                = return []
 declarationCode (VarDecl id:ds)   = do
   env <- stState
@@ -29,34 +31,34 @@ declarationCode (VarInit id e:ds) = do
   rest <- declarationCode ds
   return (expr ++ rest)
 
-commandCode :: VarEnvironment -> Command -> CompilerState Int [Instruction]
+commandCode :: VarEnvironment -> Command -> ST Int [Instruction]
 commandCode env (BeginEnd cs) = commandsCode env cs
 commandCode _ _               = error "[ERROR] - Unable to compile commands of your program"
 
-commandsCode :: VarEnvironment -> [Command] -> CompilerState Int [Instruction]
+commandsCode :: VarEnvironment -> [Command] -> ST Int [Instruction]
 commandsCode _ []                       = return []
 commandsCode env (Assign id e:cs)       = do
   let expr = expressionCode env e
-  let addr = getAddress id env
+  let addr = getAddressFromID id env
   rest <- commandsCode env cs
   return (expr ++ [STORE addr] ++ rest)
 commandsCode env (IfThenElse e c c':cs) = do
   let expr = expressionCode env e
   thenCmd   <- commandsCode env [c]
   elseCmd   <- commandsCode env [c']
-  elseLabel <- freshLabel
-  endLabel  <- freshLabel
+  elseLabel <- getFreshLabel
+  endLabel  <- getFreshLabel
   rest      <- commandsCode env cs
   return (expr ++ [JUMPIFZ elseLabel] ++ thenCmd ++ [JUMP endLabel] ++ [Label elseLabel] ++ elseCmd ++ [Label endLabel] ++ rest)
 commandsCode env (While e c:cs)         = do
   let expr = expressionCode env e
   body       <- commandCode env c
-  startLabel <- freshLabel
-  endLabel   <- freshLabel
+  startLabel <- getFreshLabel
+  endLabel   <- getFreshLabel
   rest       <- commandsCode env cs
   return ([Label startLabel] ++ expr ++ [JUMPIFZ endLabel] ++ body ++ [JUMP startLabel] ++ rest)
 commandsCode env (GetInt id:cs)         = do
-  let addr = getAddress id env
+  let addr = getAddressFromID id env
   rest <- commandsCode env cs
   return ([GETINT, STORE addr] ++ rest)
 commandsCode env (PrintInt e:cs)        = do
@@ -66,7 +68,7 @@ commandsCode env (PrintInt e:cs)        = do
 
 expressionCode :: VarEnvironment -> Expr -> [Instruction]
 expressionCode env (LiteralInt x)         = [LOADL x]
-expressionCode env (Var id)               = let addr = getAddress id env in [LOAD addr]
+expressionCode env (Var id)               = let addr = getAddressFromID id env in [LOAD addr]
 expressionCode env (BinOp op e e')        = (expr ++ expr' ++ binopCode op)
   where
     expr  = expressionCode env e
@@ -94,7 +96,18 @@ unopCode :: UnaryOperator -> [Instruction]
 unopCode Negation = [NOT]
 unopCode Not      = [NOT]
 
-getAddress :: Identifier -> VarEnvironment -> Int
-getAddress id env = case lookup id env of
+-- Compiler state operations
+
+getInstructionsAndState :: ST s a -> s -> (a, s)
+getInstructionsAndState (S st) env = st env
+
+getFreshLabel :: ST Int Identifier
+getFreshLabel = do
+  n <- stState
+  stUpdate (n+1)
+  return ('#':(show n))
+
+getAddressFromID :: Identifier -> VarEnvironment -> Int
+getAddressFromID id env = case lookup id env of
   Just addr -> addr
   Nothing   -> error ("[ERROR] - Variable " ++ id ++ " not found in env:\n" ++ show env)

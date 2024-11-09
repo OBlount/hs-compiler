@@ -20,7 +20,7 @@ main = do
     \      x := x * i;\
     \      i := i + 1\
     \    end;\
-    \  printint (x)\
+    \  printint (x); \
     \end"
   putStrLn ("src> " ++ src)
   let parseResult = parse program src
