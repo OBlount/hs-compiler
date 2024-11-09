@@ -54,13 +54,13 @@ string (x:xs) = do
   string xs
   return (x:xs)
 
-spaceOrSemicolon :: Parser ()
-spaceOrSemicolon = P (\src -> let (_, src') = span (\c -> isSpace c || c == ';') src
+whitespace :: Parser ()
+whitespace = P (\src -> let (_, src') = span (\c -> isSpace c || c == ';' || c == '\n' || c == '\t') src
                    in [((), src')])
 
 token :: Parser a -> Parser a
 token pa = P (\src -> concat $
-               map (\(_, src') -> parse pa src') (parse spaceOrSemicolon src))
+               map (\(_, src') -> parse pa src') (parse whitespace src))
 
 identifier :: Parser Identifier
 identifier = some (sat isAlphaNum)
