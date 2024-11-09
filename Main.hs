@@ -29,4 +29,4 @@ main = do
     [(ast, "")] -> do
       let compileResult = compile ast
       let initialState = TAMState { tsCode = compileResult, tsCounter = 0, tsStack = [] }
-      run (execute compileResult) initialState
+      execute executeProgram initialState

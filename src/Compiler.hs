@@ -33,7 +33,7 @@ declarationCode (VarInit id e:ds) = do
 
 commandCode :: VarEnvironment -> Command -> ST Int [Instruction]
 commandCode env (BeginEnd cs) = commandsCode env cs
-commandCode _ _               = error "[ERROR] - Unable to compile commands of your program"
+commandCode env c             = commandsCode env [c]
 
 commandsCode :: VarEnvironment -> [Command] -> ST Int [Instruction]
 commandsCode _ []                       = return []

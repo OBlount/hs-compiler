@@ -5,16 +5,20 @@ import TAMState ((!|!), continue, stackPush, stackPop, stackUpdate, findLabel, u
 import STIO (StateIO(..), stState, stUpdate, lift)
 import TAMCode (Instruction(..))
 
-run :: StateIO TAMState a -> TAMState -> IO ()
-run (StT state) initialState = do
+execute :: StateIO TAMState a -> TAMState -> IO ()
+execute (StT state) initialState = do
   state initialState
   return ()
 
-execute :: [Instruction] -> StateIO TAMState ()
-execute [] = return ()
-execute (i:is) = do
-  executeInstruction i
-  execute is
+executeProgram :: StateIO TAMState ()
+executeProgram = do
+  state <- stState
+  i     <- stackNextInstruction
+  case i of
+    HALT -> return ()
+    _    -> do
+    executeInstruction i
+    executeProgram
 
 executeInstruction :: Instruction -> StateIO TAMState ()
 executeInstruction (LOAD a)      = do
@@ -50,8 +54,8 @@ executeInstruction (JUMPIFZ id) = do
   p                  <- stackPop
   if p == 0 then updateCounter instructionAddress
             else continue
-executeInstruction (Label id)   = return ()
-executeInstruction (HALT)       = return ()
+executeInstruction (Label id)   = continue
+executeInstruction (HALT)       = return () -- Handled at higher level
 executeInstruction (ADD)        = do
   state <- stState
   x     <- stackPop
@@ -72,42 +76,42 @@ executeInstruction (MUL)        = do
   continue
 executeInstruction (DIV)        = do
   state <- stState
-  x     <- stackPop
   y     <- stackPop
+  x     <- stackPop
   stackPush (x `div` y)
   continue
 executeInstruction (LSS)        = do
   state <- stState
-  x     <- stackPop
   y     <- stackPop
-  stackPush ((if (x < y) then 1 else 0))
+  x     <- stackPop
+  stackPush (if (x < y) then 1 else 0)
   continue
 executeInstruction (GRT)        = do
   state <- stState
-  x     <- stackPop
   y     <- stackPop
-  stackPush ((if (x > y) then 1 else 0))
+  x     <- stackPop
+  stackPush (if (x > y) then 1 else 0)
   continue
 executeInstruction (EQL)        = do
   state <- stState
   x     <- stackPop
   y     <- stackPop
-  stackPush ((if (x == y) then 1 else 0))
+  stackPush (if (x == y) then 1 else 0)
   continue
 executeInstruction (AND)        = do
   state <- stState
   x     <- stackPop
   y     <- stackPop
-  stackPush ((if (x /= 0) && (y /= 0) then 1 else 0))
+  stackPush (if (x /= 0) && (y /= 0) then 1 else 0)
   continue
 executeInstruction (OR)         = do
   state <- stState
   x     <- stackPop
   y     <- stackPop
-  stackPush ((if (x /= 0) || (y /= 0) then 1 else 0))
+  stackPush (if (x /= 0) || (y /= 0) then 1 else 0)
   continue
 executeInstruction (NOT)        = do
   state <- stState
   x     <- stackPop
-  stackPush ((if (x == 0) then 1 else 0))
+  stackPush (if (x == 0) then 1 else 0)
   continue
