@@ -43,22 +43,23 @@ readInstructions input =
 
 readInstruction :: String -> Instruction
 readInstruction line = case words line of
-  ["LOADL", n]     -> LOADL (read n)
-  ["STORE", n]     -> STORE (read n)
-  ["LOAD", n]      -> LOAD (read n)
-  ["GETINT"]       -> GETINT
-  ["PUTINT"]       -> PUTINT
-  ["HALT"]         -> HALT
-  ["ADD"]          -> ADD
-  ["MUL"]          -> MUL
-  ["LSS"]          -> LSS
-  ["GRT"]          -> GRT
-  ["NOT"]          -> NOT
-  ["JUMP", l]      -> JUMP (removeQuotes l)
-  ["JUMPIFZ", l]   -> JUMPIFZ (removeQuotes l)
-  ["Label", l]     -> Label (removeQuotes l)
-  _                -> error "[ERROR] - Something went wrong reading your file"
-
-removeQuotes :: String -> String
-removeQuotes str = if head str == '"' && last str == '"' then tail (init str)
-                                                         else str
+  ["LOAD", n]    -> LOAD (read n)
+  ["STORE", n]   -> STORE (read n)
+  ["LOADL", n]   -> LOADL (read n)
+  ["GETINT"]     -> GETINT
+  ["PUTINT"]     -> PUTINT
+  ["JUMP", l]    -> JUMP l
+  ["JUMPIFZ", l] -> JUMPIFZ l
+  ["Label", l]   -> Label l
+  ["HALT"]       -> HALT
+  ["ADD"]        -> ADD
+  ["SUB"]        -> SUB
+  ["MUL"]        -> MUL
+  ["DIV"]        -> DIV
+  ["LSS"]        -> LSS
+  ["GRT"]        -> GRT
+  ["EQL"]        -> EQL
+  ["AND"]        -> AND
+  ["OR"]         -> OR
+  ["NOT"]        -> NOT
+  _              -> error "[ERROR] - Something went wrong reading your file"
