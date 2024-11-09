@@ -56,7 +56,7 @@ commandsCode env (While e c:cs)         = do
   startLabel <- getFreshLabel
   endLabel   <- getFreshLabel
   rest       <- commandsCode env cs
-  return ([Label startLabel] ++ expr ++ [JUMPIFZ endLabel] ++ body ++ [JUMP startLabel] ++ rest)
+  return ([Label startLabel] ++ expr ++ [JUMPIFZ endLabel] ++ body ++ [JUMP startLabel] ++ [Label endLabel] ++ rest)
 commandsCode env (GetInt id:cs)         = do
   let addr = getAddressFromID id env
   rest <- commandsCode env cs
