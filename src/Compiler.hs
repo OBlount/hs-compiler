@@ -24,7 +24,7 @@ declarationCode (VarDecl id:ds)   = do
 declarationCode (VarInit id e:ds) = do
   addr <- getVarCount
   env  <- getVarEnvironment
-  let expr = expressionCode env e
+  expr <- expressionCode env e
   addVariableToEnv [(id, addr)]
   rest <- declarationCode ds
   return (expr ++ rest)
@@ -36,12 +36,12 @@ commandCode env c             = commandsCode env [c]
 commandsCode :: VarEnvironment -> [Command] -> ST CompilerState [Instruction]
 commandsCode _ []                       = return []
 commandsCode env (Assign id e:cs)       = do
-  let expr = expressionCode env e
+  expr <- expressionCode env e
   let addr = getAddressFromID id env
   rest <- commandsCode env cs
   return (expr ++ [STORE addr] ++ rest)
 commandsCode env (IfThenElse e c c':cs) = do
-  let expr = expressionCode env e
+  expr      <- expressionCode env e
   thenCmd   <- commandsCode env [c]
   elseCmd   <- commandsCode env [c']
   elseLabel <- getFreshLabel
@@ -49,7 +49,7 @@ commandsCode env (IfThenElse e c c':cs) = do
   rest      <- commandsCode env cs
   return (expr ++ [JUMPIFZ elseLabel] ++ thenCmd ++ [JUMP endLabel] ++ [Label elseLabel] ++ elseCmd ++ [Label endLabel] ++ rest)
 commandsCode env (While e c:cs)         = do
-  let expr = expressionCode env e
+  expr       <- expressionCode env e
   body       <- commandCode env c
   startLabel <- getFreshLabel
   endLabel   <- getFreshLabel
@@ -60,20 +60,20 @@ commandsCode env (GetInt id:cs)         = do
   rest <- commandsCode env cs
   return ([GETINT, STORE addr] ++ rest)
 commandsCode env (PrintInt e:cs)        = do
-  let expr = expressionCode env e
+  expr <- expressionCode env e
   rest <- commandsCode env cs
   return (expr ++ [PUTINT] ++ rest)
 
-expressionCode :: VarEnvironment -> Expr -> [Instruction]
-expressionCode env (LiteralInt x)         = [LOADL x]
-expressionCode env (Var id)               = let addr = getAddressFromID id env in [LOAD addr]
-expressionCode env (BinOp op e e')        = (expr ++ expr' ++ binopCode op)
-  where
-    expr  = expressionCode env e
-    expr' = expressionCode env e'
-expressionCode env (UnOp op e)            = (expr ++ unopCode op)
-  where
-    expr = expressionCode env e
+expressionCode :: VarEnvironment -> Expr -> ST CompilerState [Instruction]
+expressionCode env (LiteralInt x)         = return [LOADL x]
+expressionCode env (Var id)               = let addr = getAddressFromID id env in return [LOAD addr]
+expressionCode env (BinOp op e e')        = do
+  expr  <- expressionCode env e
+  expr' <- expressionCode env e'
+  return (expr ++ expr' ++ binopCode op)
+expressionCode env (UnOp op e)            = do
+  expr <- expressionCode env e
+  return (expr ++ unopCode op)
 expressionCode env (Conditional e e' e'') = undefined -- TODO
 
 binopCode :: BinaryOperator -> [Instruction]
