@@ -63,7 +63,10 @@ token pa = P (\src -> concat $
                map (\(_, src') -> parse pa src') (parse whitespace src))
 
 identifier :: Parser Identifier
-identifier = some (sat isAlphaNum)
+identifier = token $ do
+  c  <- sat isAlpha
+  cs <- many (sat isAlphaNum)
+  return (c:cs)
 
 literalInt :: Parser Expr
 literalInt =  token $ do
