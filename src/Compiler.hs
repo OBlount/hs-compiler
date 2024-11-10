@@ -74,7 +74,13 @@ expressionCode env (BinOp op e e')        = do
 expressionCode env (UnOp op e)            = do
   expr <- expressionCode env e
   return (expr ++ unopCode op)
-expressionCode env (Conditional e e' e'') = undefined -- TODO
+expressionCode env (Conditional e e' e'') = do
+  expr      <- expressionCode env e
+  expr'     <- expressionCode env e'
+  expr''    <- expressionCode env e''
+  elseLabel <- getFreshLabel
+  endLabel  <- getFreshLabel
+  return (expr ++ [JUMPIFZ elseLabel] ++ expr' ++ [JUMP endLabel] ++ [Label elseLabel] ++ expr'' ++ [Label endLabel])
 
 binopCode :: BinaryOperator -> [Instruction]
 binopCode Addition         = [ADD]
