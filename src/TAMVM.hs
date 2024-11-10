@@ -7,9 +7,8 @@ import TAMCode (Instruction(..))
 
 execute :: StateIO TAMState a -> TAMState -> IO ()
 execute (StT state) initialState = do
-  (_, tamState) <-state initialState
+  (_, tamState) <- state initialState
   putStrLn ("Final stack: " ++ (show tamState))
-  return ()
 
 executeProgram :: StateIO TAMState ()
 executeProgram = do

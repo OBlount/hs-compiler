@@ -1,41 +1,39 @@
 module Compiler where
 
-import Data.List
-
+import CompilerState (CompilerState(..), VarEnvironment)
+import CompilerState (run, addVariableToEnv, getVarEnvironment, getVarCount, getFreshLabel, getAddressFromID)
+import ST (ST(..))
 import MiniTriangle (Program(..), Declaration(..), Command(..), Identifier)
 import MiniTriangle (Expr(..), BinaryOperator(..), UnaryOperator(..))
 import TAMCode (Instruction(..))
-import ST (ST(..), stState, stUpdate)
-
-type VarEnvironment = [(Identifier, Int)]
 
 compile :: Program -> [Instruction]
-compile (LetIn ds c) =
-  let (varCode, varEnv) = getInstructionsAndState (declarationCode ds) []
-      (cmdCode, _)      = getInstructionsAndState (commandCode varEnv c) 0
-  in varCode ++ cmdCode ++ [HALT]
+compile (LetIn ds c) = run (do
+        varCode <- declarationCode ds
+        env     <- getVarEnvironment
+        cmdCode <- commandCode env c
+        return (varCode ++ cmdCode ++ [HALT]))
 
-declarationCode :: [Declaration] -> ST VarEnvironment [Instruction]
+declarationCode :: [Declaration] -> ST CompilerState [Instruction]
 declarationCode []                = return []
 declarationCode (VarDecl id:ds)   = do
-  env <- stState
-  let addr = length env
-  stUpdate ((id, addr) :env)
+  addr <- getVarCount
+  addVariableToEnv [(id, addr)]
   rest <- declarationCode ds
   return (LOADL 0 : rest)
 declarationCode (VarInit id e:ds) = do
-  env <- stState
+  addr <- getVarCount
+  env  <- getVarEnvironment
   let expr = expressionCode env e
-  let addr = length env
-  stUpdate ((id, addr) :env)
+  addVariableToEnv [(id, addr)]
   rest <- declarationCode ds
   return (expr ++ rest)
 
-commandCode :: VarEnvironment -> Command -> ST Int [Instruction]
+commandCode :: VarEnvironment -> Command -> ST CompilerState [Instruction]
 commandCode env (BeginEnd cs) = commandsCode env cs
 commandCode env c             = commandsCode env [c]
 
-commandsCode :: VarEnvironment -> [Command] -> ST Int [Instruction]
+commandsCode :: VarEnvironment -> [Command] -> ST CompilerState [Instruction]
 commandsCode _ []                       = return []
 commandsCode env (Assign id e:cs)       = do
   let expr = expressionCode env e
@@ -95,19 +93,3 @@ binopCode Disjunction      = [OR]
 unopCode :: UnaryOperator -> [Instruction]
 unopCode Negation = [NOT]
 unopCode Not      = [NOT]
-
--- Compiler state operations
-
-getInstructionsAndState :: ST s a -> s -> (a, s)
-getInstructionsAndState (S st) env = st env
-
-getFreshLabel :: ST Int Identifier
-getFreshLabel = do
-  n <- stState
-  stUpdate (n+1)
-  return ('#':(show n))
-
-getAddressFromID :: Identifier -> VarEnvironment -> Int
-getAddressFromID id env = case lookup id env of
-  Just addr -> addr
-  Nothing   -> error ("[ERROR] - Variable " ++ id ++ " not found in env:\n" ++ show env)

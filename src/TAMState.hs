@@ -1,8 +1,6 @@
 module TAMState where
 
 import Data.List
-import Control.Applicative
-import Control.Monad
 
 import STIO (StateIO(..), stState, stUpdate)
 import TAMCode (Instruction(..))
