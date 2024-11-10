@@ -178,6 +178,11 @@ tier1 = do
   <|> do
     t <- token identifier
     return (Var t)
+  <|> do
+    _ <- token (string "(")
+    e <- token parseExpr
+    _ <- token (string ")")
+    return (e)
 
 -- Parser for commands
 
