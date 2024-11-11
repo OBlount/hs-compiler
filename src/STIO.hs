@@ -18,7 +18,7 @@ instance Applicative (StateIO s) where
     return (f' a, s''))
 
 instance Monad (StateIO s) where
-  return x = pure x
+  return = pure
   st >>= f = StT (\s -> do
     (x, s') <- app st s
     app (f x) s')

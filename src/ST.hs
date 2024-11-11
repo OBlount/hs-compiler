@@ -15,7 +15,7 @@ instance Applicative (ST s) where
                              in (f' a, s''))
 
 instance Monad (ST s) where
-  return x = pure x
+  return = pure
   st >>= f = S (\s -> let (x, s') = app st s
                       in app (f x) s')
 
