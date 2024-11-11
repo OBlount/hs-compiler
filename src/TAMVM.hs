@@ -17,8 +17,8 @@ executeProgram = do
   case i of
     HALT -> return ()
     _    -> do
-    executeInstruction i
-    executeProgram
+      executeInstruction i
+      executeProgram
 
 executeInstruction :: Instruction -> StateIO TAMState ()
 executeInstruction (LOAD a)      = do

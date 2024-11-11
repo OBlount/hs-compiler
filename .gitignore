@@ -1,6 +1,8 @@
+# bins
 *.hi
 *.o
-aec
+*.exe
 
+# project files
 *.exp
 *.tam

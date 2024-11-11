@@ -29,7 +29,7 @@ main = do
                     let initialState = TAMState { tsCode = instructions, tsCounter = 0, tsStack = [] }
                     execute executeProgram initialState
         _      -> error "Please provide a .mt or .tam file"
-    []         -> error "Program usage: \n\t- ./mtc [filename].mt\n\t- ./mtc [filename.tam]"
+    []         -> error "Program usage: \n\t- ./mtc [filename].mt\n\t- ./mtc [filename].tam"
 
 writeInstructions :: [Instruction] -> FilePath -> IO ()
 writeInstructions is path = do
