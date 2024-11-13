@@ -40,4 +40,4 @@ readInstructions :: String -> [Instruction]
 readInstructions input = case parse tamInstructions [c | c <- input, c /= '"'] of
   [(program, endString)] -> if endString == "" || endString == "\n" then program
                                                                     else error "[ERROR] - Something went wrong reading your .tam file"
-  []               -> error "[ERROR] - Something went wrong reading your .tam file"
+  []                     -> error "[ERROR] - Something went wrong reading your .tam file"
