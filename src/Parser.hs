@@ -7,6 +7,7 @@ import Control.Monad
 import MiniTriangle (Expr(..))
 import MiniTriangle (BinaryOperator(..), UnaryOperator(..))
 import MiniTriangle (Command(..), Declaration(..), Program(..), Identifier)
+import TAMCode (Instruction(..))
 
 newtype Parser a = P (String -> [(a, String)])
 
@@ -64,7 +65,7 @@ token pa = P (\src -> concat $
 
 identifier :: Parser Identifier
 identifier = token $ do
-  c  <- sat isAlpha
+  c  <- sat isAlpha <|> sat (\c -> c == '#')
   cs <- many (sat isAlphaNum)
   return (c:cs)
 
@@ -72,6 +73,11 @@ literalInt :: Parser Expr
 literalInt =  token $ do
   xs <- some digit
   return (LiteralInt $ read xs)
+
+integer :: Parser Int
+integer = token $ do
+  xs <- some digit
+  return (read xs)
 
 -- Parser for arithmetic and expressions (tier 1 = highest precedence)
 
@@ -274,3 +280,31 @@ program = do
   _    <- token (string "in")
   body <- token command
   return (LetIn vars body)
+
+-- Parser for .tam files
+
+tamInstruction :: Parser Instruction
+tamInstruction = (token (string "STORE") >> token integer >>= return . STORE)
+       <|> (token (string "LOADL")       >> token integer >>= return . LOADL)
+       <|> (token (string "LOAD")        >> token integer >>= return . LOAD)
+       <|> (token (string "GETINT")      >> return GETINT)
+       <|> (token (string "PUTINT")      >> return PUTINT)
+       <|> (token (string "JUMPIFZ")     >> token identifier >>= return . JUMPIFZ)
+       <|> (token (string "JUMP")        >> token identifier >>= return . JUMP)
+       <|> (token (string "Label")       >> token identifier >>= return . Label)
+       <|> (token (string "HALT")        >> return HALT)
+       <|> (token (string "ADD")         >> return ADD)
+       <|> (token (string "SUB")         >> return SUB)
+       <|> (token (string "MUL")         >> return MUL)
+       <|> (token (string "DIV")         >> return DIV)
+       <|> (token (string "LSS")         >> return LSS)
+       <|> (token (string "GRT")         >> return GRT)
+       <|> (token (string "EQL")         >> return EQL)
+       <|> (token (string "AND")         >> return AND)
+       <|> (token (string "OR")          >> return OR)
+       <|> (token (string "NOT")         >> return NOT)
+
+tamInstructions :: Parser [Instruction]
+tamInstructions = do
+  is <- many tamInstruction
+  return (is)

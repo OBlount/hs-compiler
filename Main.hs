@@ -29,7 +29,7 @@ main = do
                     let initialState = TAMState { tsCode = instructions, tsCounter = 0, tsStack = [] }
                     execute executeProgram initialState
         _      -> error "Please provide a .mt or .tam file"
-    []         -> error "Program usage: \n\t- ./mtc [filename].mt\n\t- ./mtc [filename].tam"
+    [] -> error "Program usage: \n\t- ./mtc [filename].mt\n\t- ./mtc [filename].tam"
 
 writeInstructions :: [Instruction] -> FilePath -> IO ()
 writeInstructions is path = do
@@ -37,29 +37,7 @@ writeInstructions is path = do
   writeFile path content
 
 readInstructions :: String -> [Instruction]
-readInstructions input =
-  case map readInstruction (lines input) of
-    list -> [i | i <- list]
-
-readInstruction :: String -> Instruction
-readInstruction line = case words line of
-  ["LOAD", n]    -> LOAD (read n)
-  ["STORE", n]   -> STORE (read n)
-  ["LOADL", n]   -> LOADL (read n)
-  ["GETINT"]     -> GETINT
-  ["PUTINT"]     -> PUTINT
-  ["JUMP", l]    -> JUMP l
-  ["JUMPIFZ", l] -> JUMPIFZ l
-  ["Label", l]   -> Label l
-  ["HALT"]       -> HALT
-  ["ADD"]        -> ADD
-  ["SUB"]        -> SUB
-  ["MUL"]        -> MUL
-  ["DIV"]        -> DIV
-  ["LSS"]        -> LSS
-  ["GRT"]        -> GRT
-  ["EQL"]        -> EQL
-  ["AND"]        -> AND
-  ["OR"]         -> OR
-  ["NOT"]        -> NOT
-  _              -> error "[ERROR] - Something went wrong reading your file"
+readInstructions input = case parse tamInstructions [c | c <- input, c /= '"'] of
+  [(program, endString)] -> if endString == "" || endString == "\n" then program
+                                                                    else error "[ERROR] - Something went wrong reading your .tam file"
+  []               -> error "[ERROR] - Something went wrong reading your .tam file"
