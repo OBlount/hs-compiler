@@ -1,13 +1,14 @@
 module Parser where
 
 import Data.Char
+import Data.List
 import Control.Applicative
 import Control.Monad
 
 import MiniTriangle (Expr(..))
 import MiniTriangle (BinaryOperator(..), UnaryOperator(..))
 import MiniTriangle (Command(..), Declaration(..), Program(..), Identifier)
-import TAMCode (Instruction(..))
+import TAMCode (Instruction(..), Address(..))
 
 newtype Parser a = P (String -> [(a, String)])
 
@@ -284,25 +285,38 @@ program = do
 -- Parser for .tam files
 
 tamInstruction :: Parser Instruction
-tamInstruction = (token (string "STORE") >> token integer >>= return . STORE)
-       <|> (token (string "LOADL")       >> token integer >>= return . LOADL)
-       <|> (token (string "LOAD")        >> token integer >>= return . LOAD)
-       <|> (token (string "GETINT")      >> return GETINT)
-       <|> (token (string "PUTINT")      >> return PUTINT)
-       <|> (token (string "JUMPIFZ")     >> token identifier >>= return . JUMPIFZ)
-       <|> (token (string "JUMP")        >> token identifier >>= return . JUMP)
-       <|> (token (string "Label")       >> token identifier >>= return . Label)
-       <|> (token (string "HALT")        >> return HALT)
-       <|> (token (string "ADD")         >> return ADD)
-       <|> (token (string "SUB")         >> return SUB)
-       <|> (token (string "MUL")         >> return MUL)
-       <|> (token (string "DIV")         >> return DIV)
-       <|> (token (string "LSS")         >> return LSS)
-       <|> (token (string "GRT")         >> return GRT)
-       <|> (token (string "EQL")         >> return EQL)
-       <|> (token (string "AND")         >> return AND)
-       <|> (token (string "OR")          >> return OR)
-       <|> (token (string "NOT")         >> return NOT)
+tamInstruction = (token (string "STORE")   >> token address >>= return . STORE)
+             <|> (token (string "LOADL")   >> token integer >>= return . LOADL)
+             <|> (token (string "LOAD")    >> token address >>= return . LOAD)
+             <|> (token (string "GETINT")  >> return GETINT)
+             <|> (token (string "PUTINT")  >> return PUTINT)
+             <|> (token (string "JUMPIFZ") >> token identifier >>= return . JUMPIFZ)
+             <|> (token (string "JUMP")    >> token identifier >>= return . JUMP)
+             <|> (token (string "Label")   >> token identifier >>= return . Label)
+             <|> (token (string "HALT")    >> return HALT)
+             <|> (token (string "ADD")     >> return ADD)
+             <|> (token (string "SUB")     >> return SUB)
+             <|> (token (string "MUL")     >> return MUL)
+             <|> (token (string "DIV")     >> return DIV)
+             <|> (token (string "LSS")     >> return LSS)
+             <|> (token (string "GRT")     >> return GRT)
+             <|> (token (string "EQL")     >> return EQL)
+             <|> (token (string "AND")     >> return AND)
+             <|> (token (string "OR")      >> return OR)
+             <|> (token (string "NOT")     >> return NOT)
+             <|> (token (string "CALL")    >> token identifier >>= return . CALL)
+             <|> (token (string "RETURN")  >> token integer >>= \n -> token integer >>= \m -> return (RETURN n m))
+
+address :: Parser Address
+address = token $ do
+  _      <- token $ string "["
+  base   <- token $ (string "SB" <|> string "LB")
+  _      <- token $ (string "+" <|> string "-")
+  offset <- token $ integer
+  _      <- token $ string "]"
+  case base of
+    "SB" -> return (Global offset)
+    "LB" -> return (Local offset)
 
 tamInstructions :: Parser [Instruction]
 tamInstructions = do

@@ -12,11 +12,13 @@ type PC    = Int
 data TAMState = TAMState {
   tsCode    :: [Instruction],
   tsCounter :: PC,
-  tsStack   :: Stack
+  tsStack   :: Stack,
+  tsSB      :: Int,
+  tsLB      :: Int
 }
 
 instance Show TAMState where
-  show (TAMState _ _ stack) = (show stack)
+  show (TAMState _ _ stack _ _) = (show stack)
 
 -- TAMState operations
 
@@ -42,6 +44,21 @@ stackNextInstruction = do
   state <- stState
   return (nextInstruction state)
 
+getStack :: StateIO TAMState Stack
+getStack = do
+  state <- stState
+  return (tsStack state)
+
+setStack :: Stack -> StateIO TAMState ()
+setStack s = do
+  state <- stState
+  stUpdate (state { tsStack = s })
+
+getStackPointer :: StateIO TAMState Int
+getStackPointer = do
+  state <- stState
+  return (length (tsStack state))
+
 getCounter :: StateIO TAMState PC
 getCounter = do
   state <- stState
@@ -51,6 +68,21 @@ updateCounter :: PC -> StateIO TAMState ()
 updateCounter c = do
   state <- stState
   stUpdate (state { tsCounter = c })
+
+getSB :: StateIO TAMState Int
+getSB = do
+  state <- stState
+  return (tsSB state)
+
+getLB :: StateIO TAMState Int
+getLB = do
+  state <- stState
+  return (tsLB state)
+
+updateLB :: Int -> StateIO TAMState ()
+updateLB lb = do
+  state <- stState
+  stUpdate (state { tsLB = lb })
 
 continue :: StateIO TAMState ()
 continue = do

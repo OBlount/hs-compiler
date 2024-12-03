@@ -2,8 +2,12 @@ module TAMCode where
 
 import MiniTriangle (Identifier)
 
-data Instruction = LOAD Int
-                 | STORE Int
+data Address = Global Int
+             | Local Int
+  deriving (Show)
+
+data Instruction = LOAD Address
+                 | STORE Address
                  | LOADL Int
                  | GETINT
                  | PUTINT
@@ -21,4 +25,6 @@ data Instruction = LOAD Int
                  | AND
                  | OR
                  | NOT
+                 | CALL Identifier
+                 | RETURN Int Int
   deriving (Show)

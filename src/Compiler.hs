@@ -5,7 +5,7 @@ import CompilerState (run, addVariableToEnv, getVarEnvironment, getVarCount, get
 import ST (ST(..))
 import MiniTriangle (Program(..), Declaration(..), Command(..), Identifier)
 import MiniTriangle (Expr(..), BinaryOperator(..), UnaryOperator(..))
-import TAMCode (Instruction(..))
+import TAMCode (Instruction(..), Address(..))
 
 compile :: Program -> [Instruction]
 compile (LetIn ds c) = run (do
@@ -39,7 +39,7 @@ commandsCode env (Assign id e:cs)       = do
   expr <- expressionCode env e
   let addr = getAddressFromID id env
   rest <- commandsCode env cs
-  return (expr ++ [STORE addr] ++ rest)
+  return (expr ++ [STORE (Global addr)] ++ rest) -- TODO
 commandsCode env (IfThenElse e c c':cs) = do
   expr      <- expressionCode env e
   thenCmd   <- commandsCode env [c]
@@ -58,7 +58,7 @@ commandsCode env (While e c:cs)         = do
 commandsCode env (GetInt id:cs)         = do
   let addr = getAddressFromID id env
   rest <- commandsCode env cs
-  return ([GETINT, STORE addr] ++ rest)
+  return ([GETINT, STORE (Global addr)] ++ rest) -- TODO
 commandsCode env (PrintInt e:cs)        = do
   expr <- expressionCode env e
   rest <- commandsCode env cs
@@ -66,7 +66,7 @@ commandsCode env (PrintInt e:cs)        = do
 
 expressionCode :: VarEnvironment -> Expr -> ST CompilerState [Instruction]
 expressionCode env (LiteralInt x)         = return [LOADL x]
-expressionCode env (Var id)               = let addr = getAddressFromID id env in return [LOAD addr]
+expressionCode env (Var id)               = let addr = getAddressFromID id env in return [LOAD (Global addr)] -- TODO: LOAD (Global addr) means it will always look from SB
 expressionCode env (BinOp op e e')        = do
   expr  <- expressionCode env e
   expr' <- expressionCode env e'

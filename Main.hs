@@ -26,7 +26,7 @@ main = do
                                                       else error "[ERROR] - Unable to parse program"
         ".tam" -> do
                     let instructions = readInstructions contents
-                    let initialState = TAMState { tsCode = instructions, tsCounter = 0, tsStack = [] }
+                    let initialState = TAMState { tsCode = instructions, tsCounter = 0, tsStack = [], tsSB = 0, tsLB = 0 }
                     execute executeProgram initialState
         _      -> error "Please provide a .mt or .tam file"
     [] -> error "Program usage: \n\t- ./mtc [filename].mt\n\t- ./mtc [filename].tam"
