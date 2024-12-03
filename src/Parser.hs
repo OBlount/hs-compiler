@@ -87,36 +87,36 @@ parseExpr = tier8
 
 tier8 :: Parser Expr
 tier8 = do
-  t  <- tier7
-  ts <- many (do
+  t  <- token tier7
+  ts <- token $ many (do
       _   <- token (string "?")
-      t'  <- tier7
+      t'  <- token tier7
       _   <- token (string ":")
-      t'' <- tier7
+      t'' <- token tier7
       return (\base -> Conditional base t' t''))
   return (foldl (\base x -> x base) t ts)
 
 tier7 :: Parser Expr
 tier7 = do
-  t  <- tier6
-  ts <- many (do
+  t  <- token tier6
+  ts <- token $ many (do
       _  <- token (string "||")
-      t' <- tier6
+      t' <- token tier6
       return (\base -> BinOp Disjunction base t'))
   return (foldl (\base x -> x base) t ts)
 
 tier6 :: Parser Expr
 tier6 = do
-  t  <- tier5
-  ts <- many (do
+  t  <- token tier5
+  ts <- token $ many (do
       _  <- token (string "&&")
-      t' <- tier5
+      t' <- token tier5
       return (\base -> BinOp Conjunction base t'))
   return (foldl (\base x -> x base) t ts)
 
 tier5 :: Parser Expr
 tier5 = do
-  not <- optional (token (string "!"))
+  not <- token $ optional (token (string "!"))
   t   <- tier4
   return $ case not of
     Just _  -> UnOp Not t
@@ -124,63 +124,63 @@ tier5 = do
 
 tier4 :: Parser Expr
 tier4 = do
-  t  <- tier3
-  ts <- many (do
+  t  <- token tier3
+  ts <- token $ many (do
       _  <- token (string "<")
-      t' <- tier3
+      t' <- token tier3
       return (\base -> BinOp LessThan base t')
     <|> do
       _  <- token (string "<=")
-      t' <- tier3
+      t' <- token tier3
       return (\base -> BinOp LessThanEqual base t')
     <|> do
       _  <- token (string ">")
-      t' <- tier3
+      t' <- token tier3
       return (\base -> BinOp GreaterThan base t')
     <|> do
       _  <- token (string ">=")
-      t' <- tier3
+      t' <- token tier3
       return (\base -> BinOp GreaterThanEqual base t')
     <|> do
       _  <- token (string "==")
-      t' <- tier3
+      t' <- token tier3
       return (\base -> BinOp Equal base t')
     <|> do
       _  <- token (string "!=")
-      t' <- tier3
+      t' <- token tier3
       return (\base -> BinOp NotEqual base t'))
   return (foldl (\base x -> x base) t ts)
 
 tier3 :: Parser Expr
 tier3 = do
-  t  <- tier2
-  ts <- many (do
+  t  <- token tier2
+  ts <- token $ many (do
       _  <- token (string "+")
-      t' <- tier2
+      t' <- token tier2
       return (\base -> BinOp Addition base t')
     <|> do
       _  <- token (string "-")
-      t' <- tier2
+      t' <- token tier2
       return (\base -> BinOp Subtraction base t'))
   return (foldl (\base x -> x base) t ts)
 
 tier2 :: Parser Expr
 tier2 = do
-  t  <- tier1
-  ts <- many (do
+  t  <- token tier1
+  ts <- token $ many (do
       _  <- token (string "*")
-      t' <- tier1
+      t' <- token tier1
       return (\base -> BinOp Multiplication base t')
     <|> do
       _  <- token (string "/")
-      t' <- tier1
+      t' <-token tier1
       return (\base -> BinOp Division base t'))
   return (foldl (\base x -> x base) t ts)
 
 tier1 :: Parser Expr
 tier1 = do
     _ <- token (string "-")
-    t <- literalInt
+    t <- parseExpr
     return (UnOp Negation t)
   <|> do
     t <- token literalInt
@@ -197,18 +197,19 @@ tier1 = do
 -- Parser for commands
 
 command :: Parser Command
-command = assign
-      <|> ifThenElse
-      <|> while
-      <|> getInt
-      <|> printInt
-      <|> beginEnd
+command = token assign
+      <|> token ifThenElse
+      <|> token while
+      <|> token getInt
+      <|> token printInt
+      <|> token beginEnd
 
 assign :: Parser Command
 assign = do
   id   <- token identifier
   _    <- token (string ":=")
   expr <- token parseExpr
+  _    <- token whitespace
   return (Assign id expr)
 
 ifThenElse :: Parser Command
@@ -219,6 +220,7 @@ ifThenElse = do
   trueBranch  <- token command
   _           <- token (string "else")
   falseBranch <- token command
+  _    <- token whitespace
   return (IfThenElse condition trueBranch falseBranch)
 
 while :: Parser Command
@@ -227,6 +229,7 @@ while = do
   condition <- token parseExpr
   _         <- token (string "do")
   body      <- token command
+  _    <- token whitespace
   return (While condition body)
 
 getInt :: Parser Command
@@ -235,6 +238,7 @@ getInt = do
   _  <- token (string "(")
   id <- token identifier
   _  <- token (string ")")
+  _    <- token whitespace
   return (GetInt id)
 
 printInt :: Parser Command
@@ -243,6 +247,7 @@ printInt = do
   _    <- token (string "(")
   expr <- token parseExpr
   _    <- token (string ")")
+  _    <- token whitespace
   return (PrintInt expr)
 
 beginEnd :: Parser Command
@@ -256,8 +261,8 @@ beginEnd = do
 -- Parser for declarations
 
 declaration :: Parser Declaration
-declaration = declareInit
-          <|> declare
+declaration = token declareInit
+          <|> token declare
 
 declareInit :: Parser Declaration
 declareInit = do
@@ -321,5 +326,5 @@ address = token $ do
 
 tamInstructions :: Parser [Instruction]
 tamInstructions = do
-  is <- many tamInstruction
+  is <- token $ many tamInstruction
   return (is)
