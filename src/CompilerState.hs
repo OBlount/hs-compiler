@@ -7,12 +7,13 @@ import TAMCode (Instruction(..))
 type VarEnvironment = [(Identifier, Int)]
 
 data CompilerState = CompilerState {
-  csVarEnv       :: VarEnvironment,
-  csLabelCounter :: Int
+  csVarEnv           :: VarEnvironment,
+  csLabelCounter     :: Int,
+  csLBAddressingFlag :: Bool
 }
 
 run :: ST CompilerState [Instruction] -> [Instruction]
-run (S st) = fst $ st (CompilerState { csVarEnv = [], csLabelCounter = 0 })
+run (S st) = fst $ st (CompilerState { csVarEnv = [], csLabelCounter = 0, csLBAddressingFlag = False })
 
 -- CompilerState operations
 
@@ -38,6 +39,16 @@ getFreshLabel = do
   stUpdate (incrementLabelCounter state)
   return ('#':(show n))
 
+getLBFlag :: ST CompilerState Bool
+getLBFlag = do
+  state <- stState
+  return (csLBAddressingFlag state)
+
+setLBFlag :: Bool -> ST CompilerState ()
+setLBFlag b = do
+  state <- stState
+  stUpdate (toggleLBAddressing b state)
+
 -- Auxiliary functions
 
 addVariable :: VarEnvironment -> CompilerState -> CompilerState
@@ -45,6 +56,9 @@ addVariable var cs = cs { csVarEnv = (csVarEnv cs) ++ var }
 
 incrementLabelCounter :: CompilerState -> CompilerState
 incrementLabelCounter cs = cs { csLabelCounter = (csLabelCounter cs) + 1 }
+
+toggleLBAddressing :: Bool -> CompilerState -> CompilerState
+toggleLBAddressing b cs = cs { csLBAddressingFlag = b }
 
 getAddressFromID :: Identifier -> VarEnvironment -> Int
 getAddressFromID id env = case lookup id env of
