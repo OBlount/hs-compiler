@@ -96,7 +96,7 @@ expressionCode env (Conditional e e' e'') = do
   endLabel  <- getFreshLabel
   return (expr ++ [JUMPIFZ elseLabel] ++ expr' ++ [JUMP endLabel] ++ [Label elseLabel] ++ expr'' ++ [Label endLabel])
 expressionCode env (Apply f as) = do
-  args <- mapM (expressionCode env) as
+  args <- mapM (expressionCode env) (reverse as)
   let args' = concat args
   return (args' ++ [CALL f])
 

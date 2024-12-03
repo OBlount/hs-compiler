@@ -1,7 +1,11 @@
 let
-	fun square (n : Integer) : Integer = n*n;
-	var x : Integer := 7;
-	var y : Integer := 3
+	fun power (x : Integer, n : Integer) : Integer = n<=0 ? 1 : x * power(x,n-1);
+	var x : Integer;
+	var n : Integer
 in
-printint(square(x) + square(square (y)))
+begin
+	getint(x);
+	getint(n);
+	printint(power(x,n))
+end
 
