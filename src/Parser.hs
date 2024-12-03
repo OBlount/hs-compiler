@@ -8,6 +8,7 @@ import Control.Monad
 import MiniTriangle (Expr(..))
 import MiniTriangle (BinaryOperator(..), UnaryOperator(..))
 import MiniTriangle (Command(..), Declaration(..), Program(..), Identifier)
+import MiniTriangle (Type(..))
 import TAMCode (Instruction(..), Address(..))
 
 newtype Parser a = P (String -> [(a, String)])
@@ -75,10 +76,44 @@ literalInt =  token $ do
   xs <- some digit
   return (LiteralInt $ read xs)
 
+literalBool :: Parser Expr
+literalBool = token $ do
+  b <- token (string "true" <|> string "false")
+  case b of
+    "true"  -> return (LiteralBool True)
+    "false" -> return (LiteralBool False)
+
 integer :: Parser Int
 integer = token $ do
   xs <- some digit
   return (read xs)
+
+paramList :: Parser [(Identifier, Type)]
+paramList = token $ do
+  ps <- many param
+  return ps
+
+param :: Parser (Identifier, Type)
+param = do
+  id <- token identifier
+  _  <- token (string ":")
+  t  <- token types
+  _  <- optional (token (string ","))
+  return (id, (parseType t))
+
+application :: Parser Expr
+application = do
+  id <- token identifier
+  _  <- token (string "(")
+  ps <- many arg
+  _  <- token (string ")")
+  return (Apply id ps)
+
+arg :: Parser Expr
+arg = do
+  e <- parseExpr
+  _  <- optional (token (string ","))
+  return e
 
 -- Parser for arithmetic and expressions (tier 1 = highest precedence)
 
@@ -182,8 +217,12 @@ tier1 = do
     _ <- token (string "-")
     t <- parseExpr
     return (UnOp Negation t)
+  <|> application
   <|> do
     t <- token literalInt
+    return (t)
+  <|> do
+    t <- token literalBool
     return (t)
   <|> do
     t <- token identifier
@@ -193,6 +232,15 @@ tier1 = do
     e <- token parseExpr
     _ <- token (string ")")
     return (e)
+
+-- Parser for types
+
+types :: Parser String
+types = token (string "Integer" <|> string "Boolean")
+
+parseType :: String -> Type
+parseType "Integer" = TInt
+parseType "Boolean" = TBool
 
 -- Parser for commands
 
@@ -263,20 +311,40 @@ beginEnd = do
 declaration :: Parser Declaration
 declaration = token declareInit
           <|> token declare
+          <|> token declareFunction
 
 declareInit :: Parser Declaration
 declareInit = do
   _    <- token (string "var")
   id   <- token identifier
+  _    <- token (string ":")
+  t    <- token types
   _    <- token (string ":=")
   expr <- token parseExpr
-  return (VarInit id expr)
+  _    <- token whitespace
+  return (VarInit id (parseType t) expr)
 
 declare :: Parser Declaration
 declare = do
   _  <- token (string "var")
   id <- token identifier
-  return (VarDecl id)
+  _  <- token (string ":")
+  t  <- token types
+  _  <- token whitespace
+  return (VarDecl id (parseType t))
+
+declareFunction :: Parser Declaration
+declareFunction = do
+  _  <- token (string "fun")
+  id <- token identifier
+  _  <- token (string "(")
+  ps <- token paramList
+  _  <- token (string ")")
+  _  <- token (string ":")
+  t  <- token types
+  _  <- token (string "=")
+  e  <- token parseExpr
+  return (FunDecl id ps (parseType t) e)
 
 -- Parser for programs
 
