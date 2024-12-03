@@ -250,6 +250,7 @@ beginEnd = do
   _    <- token (string "begin")
   cmds <- token (many command)
   _    <- token (string "end")
+  _    <- token whitespace
   return (BeginEnd cmds)
 
 -- Parser for declarations
