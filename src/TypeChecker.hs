@@ -18,19 +18,19 @@ typeCheckDeclarations [] = return ()
 typeCheckDeclarations ((VarDecl id t):ds) = do
   ctx <- getContext
   if checkIfVariableExists id ctx
-    then addError ("Variable " ++ id ++ " is already declared.")
-    else addVariableToContext (id, t)
+  then addError ("Variable " ++ id ++ " is already declared.")
+  else addVariableToContext (id, t)
   typeCheckDeclarations ds
 typeCheckDeclarations ((VarInit id t e):ds) = do
   ctx <- getContext
   if checkIfVariableExists id ctx
-    then addError $ "Variable " ++ id ++ " is already declared."
-    else case typeCheckExpr ctx e of
-      Nothing -> addError $ "Invalid type in initialization of " ++ id
-      Just et ->
-        if et /= t
-          then addError $ "Type mismatch in initialization of " ++ id
-          else addVariableToContext (id, t)
+  then addError $ "Variable " ++ id ++ " is already declared."
+  else case typeCheckExpr ctx e of
+    Nothing -> addError $ "Invalid type in initialization of " ++ id
+    Just et ->
+      if et /= t
+      then addError $ "Type mismatch in initialization of " ++ id
+      else addVariableToContext (id, t)
   typeCheckDeclarations ds
 typeCheckDeclarations ((FunDecl _ _ _ _):ds) = typeCheckDeclarations ds -- TODO
 
