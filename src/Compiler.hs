@@ -75,17 +75,18 @@ commandsCode env (PrintInt e:cs)        = do
   return (expr ++ [PUTINT] ++ rest)
 
 expressionCode :: VarEnvironment -> Expr -> ST CompilerState [Instruction]
-expressionCode env (LiteralInt x)         = return [LOADL x]
-expressionCode env (Var id)               = do
+expressionCode env (LiteralInt x) = return [LOADL x]
+expressionCode env (LiteralBool b) = if b then return [LOADL 1] else return [LOADL 0]
+expressionCode env (Var id) = do
   flag <- getLBFlag
   let addr       = getAddressFromID id env
   let addressing = if flag then Local addr else Global addr
   return ([LOAD addressing])
-expressionCode env (BinOp op e e')        = do
+expressionCode env (BinOp op e e') = do
   expr  <- expressionCode env e
   expr' <- expressionCode env e'
   return (expr ++ expr' ++ binopCode op)
-expressionCode env (UnOp op e)            = do
+expressionCode env (UnOp op e) = do
   expr <- expressionCode env e
   return (expr ++ unopCode op)
 expressionCode env (Conditional e e' e'') = do
