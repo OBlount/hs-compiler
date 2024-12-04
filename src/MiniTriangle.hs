@@ -18,7 +18,7 @@ data UnaryOperator = Negation | Not
   deriving (Show)
 
 data Type = TInt | TBool
-  deriving (Show)
+  deriving (Show, Eq)
 
 data Command = Assign Identifier Expr
              | IfThenElse Expr Command Command
@@ -29,10 +29,11 @@ data Command = Assign Identifier Expr
   deriving (Show)
 
 data Declaration = VarDecl Identifier Type | VarInit Identifier Type Expr
-                 | FunDecl Identifier [(Identifier, Type)] Type Expr
+                 | FunDecl Identifier [TypeContext] Type Expr
   deriving (Show)
 
 data Program = LetIn [Declaration] Command
   deriving (Show)
 
 type Identifier = String
+type TypeContext = (Identifier, Type)

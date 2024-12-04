@@ -8,7 +8,7 @@ import Control.Monad
 import MiniTriangle (Expr(..))
 import MiniTriangle (BinaryOperator(..), UnaryOperator(..))
 import MiniTriangle (Command(..), Declaration(..), Program(..), Identifier)
-import MiniTriangle (Type(..))
+import MiniTriangle (Type(..), TypeContext)
 import TAMCode (Instruction(..), Address(..))
 
 newtype Parser a = P (String -> [(a, String)])
@@ -88,12 +88,12 @@ integer = token $ do
   xs <- some digit
   return (read xs)
 
-paramList :: Parser [(Identifier, Type)]
+paramList :: Parser [TypeContext]
 paramList = token $ do
   ps <- many param
   return ps
 
-param :: Parser (Identifier, Type)
+param :: Parser TypeContext
 param = do
   id <- token identifier
   _  <- token (string ":")
