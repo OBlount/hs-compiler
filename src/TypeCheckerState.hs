@@ -20,6 +20,11 @@ addVariableToContext var = do
   state <- stState
   stUpdate (addVariable var state)
 
+replaceVariableInContext :: TypeContext -> ST TypeCheckerState ()
+replaceVariableInContext var = do
+  state <- stState
+  stUpdate (replaceVariable var state)
+
 getContext :: ST TypeCheckerState [TypeContext]
 getContext = do
   state <- stState
@@ -39,6 +44,9 @@ getErrors = do
 
 addVariable :: TypeContext -> TypeCheckerState -> TypeCheckerState
 addVariable var tcs = tcs { tcContext = (tcContext tcs) ++ [var] }
+
+replaceVariable :: TypeContext -> TypeCheckerState -> TypeCheckerState
+replaceVariable (id, t) tcs = tcs { tcContext = [(id', t') | (id', t') <- tcContext tcs, id' /= id] ++ [(id, t)] }
 
 checkIfVariableExists :: Identifier -> [TypeContext] -> Bool
 checkIfVariableExists id ctx = id `elem` map fst ctx

@@ -34,11 +34,12 @@ handleMT name contents = do
       then do
         let errors = typeCheck ast
         if not $ null errors then do
+          putStrLn ("Type errors:")
           printAllErrors errors
-          putStrLn "\n[ERROR] - Your program is not type safe. Exiting..."
+          putStrLn ("[ERROR] - " ++ (name ++ ".mt") ++ " is not type safe")
         else do
-          putStrLn "Program is type safe. Compiling..."
           let compiledProgram = compile ast
+          putStrLn ("compiled to TAM file: " ++ (name ++ ".tam"))
           writeInstructions compiledProgram (name ++ ".tam")
       else error "[ERROR] - Unable to parse program"
 

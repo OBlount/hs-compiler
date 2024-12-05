@@ -40,8 +40,8 @@ commandCode env (BeginEnd cs) = commandsCode env cs
 commandCode env c             = commandsCode env [c]
 
 commandsCode :: VarEnvironment -> [Command] -> ST CompilerState [Instruction]
-commandsCode _ []                       = return []
-commandsCode env (Assign id e:cs)       = do
+commandsCode _ [] = return []
+commandsCode env (Assign id e:cs) = do
   expr <- expressionCode env e
   flag <- getLBFlag
   let addr       = getAddressFromID id env
@@ -56,20 +56,20 @@ commandsCode env (IfThenElse e c c':cs) = do
   endLabel  <- getFreshLabel
   rest      <- commandsCode env cs
   return (expr ++ [JUMPIFZ elseLabel] ++ thenCmd ++ [JUMP endLabel] ++ [Label elseLabel] ++ elseCmd ++ [Label endLabel] ++ rest)
-commandsCode env (While e c:cs)         = do
+commandsCode env (While e c:cs) = do
   expr       <- expressionCode env e
   body       <- commandCode env c
   startLabel <- getFreshLabel
   endLabel   <- getFreshLabel
   rest       <- commandsCode env cs
   return ([Label startLabel] ++ expr ++ [JUMPIFZ endLabel] ++ body ++ [JUMP startLabel] ++ [Label endLabel] ++ rest)
-commandsCode env (GetInt id:cs)         = do
+commandsCode env (GetInt id:cs) = do
   flag <- getLBFlag
   let addr       = getAddressFromID id env
   let addressing = if flag then Local addr else Global addr
   rest <- commandsCode env cs
   return ([GETINT, STORE addressing] ++ rest)
-commandsCode env (PrintInt e:cs)        = do
+commandsCode env (PrintInt e:cs) = do
   expr <- expressionCode env e
   rest <- commandsCode env cs
   return (expr ++ [PUTINT] ++ rest)

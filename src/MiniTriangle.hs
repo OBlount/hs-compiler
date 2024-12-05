@@ -17,7 +17,7 @@ data BinaryOperator = Addition    | Subtraction      | Multiplication | Division
 data UnaryOperator = Negation | Not
   deriving (Show)
 
-data Type = TInt | TBool
+data Type = TInt | TBool | TFun [Type] Type
   deriving (Show, Eq)
 
 data Command = Assign Identifier Expr
