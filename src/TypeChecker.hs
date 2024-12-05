@@ -140,12 +140,12 @@ typeCheckExpr ctx (Conditional e e' e'') = do
   expr'' <- typeCheckExpr ctx e''
   if expr == TBool && expr' == expr'' then Just expr' else Nothing
 typeCheckExpr ctx (Apply id as) = do
-  t <- lookup id ctx
-  case t of
-    TFun as' t' -> do
-      argumentTypes <- mapM (typeCheckExpr ctx) as
-      if argumentTypes == as' then Just t' else Nothing
-    _ -> Nothing
+  TFun as' t <- lookup id ctx
+  if length as /= length as'
+  then Nothing
+  else if mapM (typeCheckExpr ctx) as == Just as'
+       then Just t
+       else Nothing
 
 binOpType :: BinaryOperator -> Type -> Type -> Maybe Type
 binOpType Addition TInt TInt         = Just TInt
