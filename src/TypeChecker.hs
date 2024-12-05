@@ -29,8 +29,9 @@ typeCheckDeclarations ((VarDecl id t):ds) = do
   typeCheckDeclarations ds
 typeCheckDeclarations ((VarInit id t e):ds) = do
   ctx <- getContext
+  expr <- typeCheckExpr ctx e
   if checkIfVariableExists id ctx
-  then case typeCheckExpr ctx e of
+  then case expr of
     Nothing -> do
       replaceVariableInContext (id, t)
       addError ("Variable " ++ id ++ ": Expression doesn't type-check")
@@ -44,7 +45,7 @@ typeCheckDeclarations ((VarInit id t e):ds) = do
       else do
         replaceVariableInContext (id, t)
         addError ("Variable " ++ id ++ ": Identifier " ++ id ++ " declared more than once")
-  else case typeCheckExpr ctx e of
+  else case expr of
     Nothing -> do
       addVariableToContext (id, t)
       addError ("Variable " ++ id ++ ": Expression doesn't type-check")
@@ -57,8 +58,9 @@ typeCheckDeclarations ((VarInit id t e):ds) = do
   typeCheckDeclarations ds
 typeCheckDeclarations ((FunDecl id as t e):ds) = do
   ctx <- getContext
+  expr <- typeCheckExpr (as ++ ctx ++ [(id, TFun (map snd as) t)]) e
   if checkIfVariableExists id ctx
-  then case typeCheckExpr (as ++ ctx ++ [(id, TFun (map snd as) t)]) e of
+  then case expr of
     Nothing -> do
       replaceVariableInContext (id, TFun (map snd as) t)
       addError ("Function " ++ id ++ ": Expression doesn't type-check")
@@ -72,7 +74,7 @@ typeCheckDeclarations ((FunDecl id as t e):ds) = do
       else do
         replaceVariableInContext (id, TFun (map snd as) t)
         addError ("Function " ++ id ++ ": Identifier " ++ id ++ " declared more than once")
-  else case typeCheckExpr (as ++ ctx ++ [(id, TFun (map snd as) t)]) e of
+  else case expr of
     Nothing -> do
       addVariableToContext (id, TFun (map snd as) t)
       addError ("Function " ++ id ++ ": Expression doesn't type-check")
@@ -91,9 +93,10 @@ typeCheckCommand ctx c             = typeCheckCommands ctx [c]
 typeCheckCommands :: [TypeContext] -> [Command] -> ST TypeCheckerState ()
 typeCheckCommands _ [] = return ()
 typeCheckCommands ctx (Assign id e:cs) = do
+  expr <- typeCheckExpr ctx e
   case lookup id ctx of
     Nothing -> addError ("assignment: " ++ id ++ " is not declared")
-    Just t  -> case typeCheckExpr ctx e of
+    Just t  -> case expr of
       Nothing -> addError ("assignment: Expression doesn't type-check for " ++ id)
       Just et -> 
         if et /= t
@@ -101,13 +104,15 @@ typeCheckCommands ctx (Assign id e:cs) = do
         else return ()
   typeCheckCommands ctx cs
 typeCheckCommands ctx (IfThenElse e c c':cs) = do
-  let et = typeCheckExpr ctx e
+  expr <- typeCheckExpr ctx e
+  let et = expr
   when (et /= Just TBool) (addError "if command: Condition is not a bool")
   typeCheckCommand ctx c
   typeCheckCommand ctx c'
   typeCheckCommands ctx cs
 typeCheckCommands ctx (While e c:cs) = do
-  let et = typeCheckExpr ctx e
+  expr <- typeCheckExpr ctx e
+  let et = expr
   when (et /= Just TBool) (addError "while: Condition in While is not a bool")
   typeCheckCommand ctx c
   typeCheckCommands ctx cs
@@ -118,34 +123,47 @@ typeCheckCommands ctx (GetInt id:cs) = do
     Nothing   -> addError ("getint: Variable " ++ id ++ " has not been declared")
   typeCheckCommands ctx cs
 typeCheckCommands ctx (PrintInt e:cs) = do
-  case typeCheckExpr ctx e of
+  expr <- typeCheckExpr ctx e
+  case expr of
     Nothing -> addError "printint: Expression doesn't type-check"
     Just t  -> when (t /= TInt) (addError "printint: You can only print integers")
   typeCheckCommands ctx cs
 
-typeCheckExpr :: [TypeContext] -> Expr -> Maybe Type
-typeCheckExpr _ (LiteralInt _) = Just TInt
-typeCheckExpr _ (LiteralBool _) = Just TBool
-typeCheckExpr ctx (Var id) = lookup id ctx
+typeCheckExpr :: [TypeContext] -> Expr -> ST TypeCheckerState (Maybe Type)
+typeCheckExpr _ (LiteralInt _) = return (Just TInt)
+typeCheckExpr _ (LiteralBool _) = return (Just TBool)
+typeCheckExpr ctx (Var id) = return (lookup id ctx)
 typeCheckExpr ctx (BinOp op e e') = do
   expr  <- typeCheckExpr ctx e
   expr' <- typeCheckExpr ctx e'
-  binOpType op expr expr'
+  return $ case (expr, expr') of
+    (Just t, Just t') -> binOpType op t t'
+    _                 -> Nothing
 typeCheckExpr ctx (UnOp op e) = do
   expr <- typeCheckExpr ctx e
-  unOpType op expr
+  return $ case expr of
+    Just t -> unOpType op t
+    _      -> Nothing
 typeCheckExpr ctx (Conditional e e' e'') = do
   expr   <- typeCheckExpr ctx e
   expr'  <- typeCheckExpr ctx e'
   expr'' <- typeCheckExpr ctx e''
-  if expr == TBool && expr' == expr'' then Just expr' else Nothing
+  return $ case expr of
+    Just TBool | expr' == expr'' -> expr'
+    _                            -> Nothing
 typeCheckExpr ctx (Apply id as) = do
-  TFun as' t <- lookup id ctx
-  if length as /= length as'
-  then Nothing
-  else if mapM (typeCheckExpr ctx) as == Just as'
-       then Just t
-       else Nothing
+  case lookup id ctx of
+    Just (TFun as' t) -> do
+      if length as /= length as'
+      then do
+        addError ("Function " ++ id ++ ": Expected " ++ (show (length as')) ++ " arguments, but got " ++ (show (length as)))
+        return Nothing
+      else do
+        argumentTypes <- mapM (typeCheckExpr ctx) as
+        if argumentTypes == map Just as'
+        then return (Just t)
+        else return Nothing
+    _ -> return Nothing
 
 binOpType :: BinaryOperator -> Type -> Type -> Maybe Type
 binOpType Addition TInt TInt         = Just TInt
